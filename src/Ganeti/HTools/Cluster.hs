@@ -943,11 +943,6 @@ nodeEvacInstance :: Node.List         -- ^ The node list (cluster-wide)
                  -> [Ndx]             -- ^ The list of available nodes
                                       -- for allocation
                  -> Result (Node.List, Instance.List, [OpCodes.OpCode])
-nodeEvacInstance nl il mode inst@(Instance.Instance
-                                  {Instance.diskTemplate = dt@DTDiskless})
-                 gdx avail_nodes =
-                   failOnSecondaryChange mode dt >>
-                   evacOneNodeOnly nl il inst gdx avail_nodes
 
 nodeEvacInstance _ _ _ (Instance.Instance
                         {Instance.diskTemplate = DTPlain}) _ _ =
@@ -956,30 +951,6 @@ nodeEvacInstance _ _ _ (Instance.Instance
 nodeEvacInstance _ _ _ (Instance.Instance
                         {Instance.diskTemplate = DTFile}) _ _ =
                   fail "Instances of type file cannot be relocated"
-
-nodeEvacInstance nl il mode inst@(Instance.Instance
-                                  {Instance.diskTemplate = dt@DTSharedFile})
-                 gdx avail_nodes =
-                   failOnSecondaryChange mode dt >>
-                   evacOneNodeOnly nl il inst gdx avail_nodes
-
-nodeEvacInstance nl il mode inst@(Instance.Instance
-                                  {Instance.diskTemplate = dt@DTBlock})
-                 gdx avail_nodes =
-                   failOnSecondaryChange mode dt >>
-                   evacOneNodeOnly nl il inst gdx avail_nodes
-
-nodeEvacInstance nl il mode inst@(Instance.Instance
-                                  {Instance.diskTemplate = dt@DTRbd})
-                 gdx avail_nodes =
-                   failOnSecondaryChange mode dt >>
-                   evacOneNodeOnly nl il inst gdx avail_nodes
-
-nodeEvacInstance nl il mode inst@(Instance.Instance
-                                  {Instance.diskTemplate = dt@DTExt})
-                 gdx avail_nodes =
-                   failOnSecondaryChange mode dt >>
-                   evacOneNodeOnly nl il inst gdx avail_nodes
 
 nodeEvacInstance nl il ChangePrimary
                  inst@(Instance.Instance {Instance.diskTemplate = DTDrbd8})
@@ -1034,6 +1005,11 @@ nodeEvacInstance nl il ChangeAll
         ) no_nodes node_pairs
 
     return (nl', il', ops)
+
+
+nodeEvacInstance nl il mode inst gdx avail_nodes =
+  failOnSecondaryChange mode (Instance.diskTemplate inst) >>
+  evacOneNodeOnly nl il inst gdx avail_nodes
 
 -- | Generic function for changing one node of an instance.
 --
