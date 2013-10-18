@@ -580,7 +580,7 @@ class ConfigMock(config.ConfigWriter):
       blacklisted_os=None,
       primary_ip_family=None,
       prealloc_wipe_disks=None,
-      enabled_disk_templates=list(constants.DISK_TEMPLATE_PREFERENCE),
+      enabled_disk_templates=list(constants.DISK_TEMPLATES),
       )
     self._cluster.ctime = self._cluster.mtime = time.time()
     self._cluster.UpgradeConfig()
