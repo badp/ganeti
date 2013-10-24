@@ -22,6 +22,7 @@
 """Block device abstraction - base class and utility functions"""
 
 import logging
+import pprint
 
 from ganeti import objects
 from ganeti import constants
@@ -377,7 +378,7 @@ class BlockDev(object):
              self.major, self.minor, self.dev_path))
 
 
-def ThrowError(msg, *args):
+def ThrowError(msg, *args, **kwargs):
   """Log an error to the node daemon and the raise an exception.
 
   @type msg: string
@@ -387,7 +388,10 @@ def ThrowError(msg, *args):
   """
   if args:
     msg = msg % args
-  logging.error(msg)
+  logging.exception(msg)
+  if kwargs:
+    details = pprint.pformat(kwargs)
+    logging.debug("Additional details about exception:\n\n%s\n", details)
   raise errors.BlockDeviceError(msg)
 
 
