@@ -218,6 +218,68 @@ class TestCheckFileStoragePathExistance(testutils.GanetiTestCase):
                       filestorage.CheckFileStoragePathAcceptance,
                       "/usr/lib64/xyz", _filename=tmpfile)
 
+class TestFileDeviceHelper(testutils.GanetiTestCase):
+  def test(self):
+    # Get temp directory
+    directory = tempfile.mkdtemp()
+    subdirectory = io.PathJoin(directory, "pinky")
+    path = io.PathJoin(subdirectory, "bunny")
+
+    should_fail = lambda fn: self.assertRaises(errors.BlockDeviceError, fn)
+    constructor = lambda path, **kwargs: \
+      filestorage.FileDeviceHelper(
+        path,
+        _skip_file_storage_acceptance_check_for_testing_purposes=True,
+        **kwargs
+      )
+
+    # Make sure it doesn't exist, and methods check for it
+    constructor(path).Exists(assert_exists=False)
+    should_fail( lambda: \
+      constructor(path).Exists(assert_exists=True))
+    should_fail( lambda: \
+      constructor(path).Size())
+    should_fail( lambda: \
+      constructor(path).Grow(20))
+
+    # Removing however fails silently.
+    constructor(path).Remove()
+
+    # Make sure we don't create all directories for you unless we ask for it
+    should_fail( lambda: \
+      constructor(path, create_with_size=42))
+
+    # Create the file.
+    fileHelper = constructor(path,
+                             create_with_size=42,
+                             create_folder=True)
+
+    # This should still fail.
+    should_fail( lambda: \
+      constructor(subdirectory).Size())
+
+
+    self.assertTrue(fileHelper.Exists())
+
+    should_fail( lambda: \
+      constructor(path, create_with_size=42))
+
+    fileHelper.Exists(assert_exists=True)
+    should_fail( lambda: \
+      constructor(path).Exists(assert_exists=False))
+
+    should_fail( lambda: \
+      constructor(path).Grow(-30))
+
+    fileHelper.Grow(58)
+    self.assertEqual(100 * 1024 * 1024, fileHelper.Size())
+
+    fileHelper.Remove()
+    fileHelper.Exists(assert_exists=False)
+
+    os.rmdir(subdirectory)
+    os.rmdir(directory)
+
 
 if __name__ == "__main__":
   testutils.GanetiTestProgram()
