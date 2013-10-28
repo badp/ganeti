@@ -28,7 +28,9 @@ import unittest
 
 from ganeti import errors
 from ganeti.storage import filestorage
+from ganeti.utils import io
 from ganeti import utils
+from ganeti import constants
 
 import testutils
 
@@ -217,6 +219,76 @@ class TestCheckFileStoragePathExistance(testutils.GanetiTestCase):
     self.assertRaises(errors.FileStoragePathError,
                       filestorage.CheckFileStoragePathAcceptance,
                       "/usr/lib64/xyz", _filename=tmpfile)
+
+
+class TestFileDeviceHelper(testutils.GanetiTestCase):
+
+  @staticmethod
+  def _Make(path, create_with_size=None, create_folders=False):
+    skip_checks = lambda path: None
+    if create_with_size:
+      return filestorage.FileDeviceHelper.Create(
+        path, create_with_size, create_folders=create_folders,
+        _file_path_acceptance_fn=skip_checks
+      )
+    else:
+      return filestorage.FileDeviceHelper(path,
+                                          _file_path_acceptance_fn=skip_checks)
+
+
+  def test(self):
+    # Get temp directory
+    directory = tempfile.mkdtemp()
+    subdirectory = io.PathJoin(directory, "pinky")
+    path = io.PathJoin(subdirectory, "bunny")
+
+    should_fail = lambda fn: self.assertRaises(errors.BlockDeviceError, fn)
+
+    # Make sure it doesn't exist, and methods check for it
+    TestFileDeviceHelper._Make(path).Exists(assert_exists=False)
+    should_fail( lambda: \
+      TestFileDeviceHelper._Make(path).Exists(assert_exists=True))
+    should_fail( lambda: \
+      TestFileDeviceHelper._Make(path).Size())
+    should_fail( lambda: \
+      TestFileDeviceHelper._Make(path).Grow(20))
+
+    # Removing however fails silently.
+    TestFileDeviceHelper._Make(path).Remove()
+
+    # Make sure we don't create all directories for you unless we ask for it
+    should_fail( lambda: \
+      TestFileDeviceHelper._Make(path, create_with_size=42))
+
+    # Create the file.
+    TestFileDeviceHelper._Make(path, create_with_size=42, create_folders=True)
+
+    # This should still fail.
+    should_fail( lambda: \
+      TestFileDeviceHelper._Make(subdirectory).Size())
+
+
+    self.assertTrue(TestFileDeviceHelper._Make(path).Exists())
+
+    should_fail( lambda: \
+      TestFileDeviceHelper._Make(path, create_with_size=42))
+
+    TestFileDeviceHelper._Make(path).Exists(assert_exists=True)
+    should_fail( lambda: \
+      TestFileDeviceHelper._Make(path).Exists(assert_exists=False))
+
+    should_fail( lambda: \
+      TestFileDeviceHelper._Make(path).Grow(-30))
+
+    TestFileDeviceHelper._Make(path).Grow(58)
+    self.assertEqual(100 * 1024 * 1024,
+                     TestFileDeviceHelper._Make(path).Size())
+
+    TestFileDeviceHelper._Make(path).Remove()
+    TestFileDeviceHelper._Make(path).Exists(assert_exists=False)
+
+    os.rmdir(subdirectory)
+    os.rmdir(directory)
 
 
 if __name__ == "__main__":
