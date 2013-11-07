@@ -34,21 +34,31 @@ testing/QAing and such. Having it internal we can also provide a monitoring
 agent for it and more visibility into what's going on. For these reasons,
 GlusterFS support will be added directly inside Ganeti.
 
-Implementation Plan
-===================
+Gluster support in Ganeti
+=========================
 
-Ganeti Side
------------
+Working with GlusterFS in kernel space essentially boils down to two steps:
 
-To realize an internal storage backend for Ganeti, one should realize
-BlockDev class in `ganeti/lib/storage/base.py` that is a specific
-class including create, remove and such. These functions should be
-realized in `ganeti/lib/storage/bdev.py`. Actually, the differences
-between implementing inside and outside (external) Ganeti are how to
-finish these functions in BlockDev class and how to combine with Ganeti
-itself. The internal implementation is not based on external scripts
-and combines with Ganeti in a more compact way. RBD patches may be a
-good reference here. Adding a backend storage steps are as follows:
+1. Mount the Gluster volume.
+2. Use files stored in the volume as instance disks.
+
+In other words, Gluster storage is a shared file storage backend, essentially.
+Ganeti just needs to mount and unmount the Gluster volume(s) appropriately
+before and after operation.
+
+Since it is not strictly necessary for Gluster to mount the disk if all that's
+needed is userspace access, however, it is inappropriate for the Gluster storage
+class to inherit from FileStorage. So we should resort to composition rather
+than inheritance:
+
+- Extract the FileStorage behavior into a FileDeviceHelper class.
+- Use the FileDeviceHelper class to implement a GlusterStorage class
+
+In order not to further inflate bdev.py, we should move FileStorage together
+with its helper function (thus reducing their visibility) and add Gluster to its
+own file, gluster.py. Moving the other classes to their own files (like it's
+been done in lib/hypervisor/) is probably outside the scope of a patch series
+that simply aims to implement Gluster.
 
 - Implement the BlockDev interface in bdev.py.
 - Add the logic in cmdlib (eg, migration, verify).
@@ -57,8 +67,26 @@ good reference here. Adding a backend storage steps are as follows:
 - The implementation will be performed similarly to the RBD one (see
   commit 7181fba).
 
-GlusterFS side
---------------
+Gluster deployment by Ganeti
+============================
+
+Basic GlusterFS deployment is relatively simple:
+
+1. Create bricks on nodes 1..n
+2. Mount them to /export/brick1/gluster
+3. On nodes 2..n, run `gluster peer probe`
+4. On node 1, run `gluster volume create`, enumerating all bricks.
+5. On node 1, run `gluster volume start`
+
+From here onwards, however, the sky's the limit. Gluster has support for
+translators, essentially "pure transformations" of simpler volumes. The
+`distribute` translator, for example, takes arbitrary "subvolumes" and
+distributes files amongst them, offering as output the union "subvolume".
+Gluster uses this translator by default, but there are some that aren't and
+might be useful for us, such as a translator that creates a block device for us.
+Unfortunately the documentation here is lacking
+
+
 
 GlusterFS is a distributed file system implemented in user space.
 The way to access GlusterFS namespace is via FUSE based Gluster native
