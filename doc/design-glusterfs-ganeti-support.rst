@@ -34,63 +34,96 @@ testing/QAing and such. Having it internal we can also provide a monitoring
 agent for it and more visibility into what's going on. For these reasons,
 GlusterFS support will be added directly inside Ganeti.
 
-Implementation Plan
-===================
+Gluster support in Ganeti
+=========================
 
-Ganeti Side
------------
+Working with GlusterFS in kernel space essentially boils down to two steps:
 
-To realize an internal storage backend for Ganeti, one should realize
-BlockDev class in `ganeti/lib/storage/base.py` that is a specific
-class including create, remove and such. These functions should be
-realized in `ganeti/lib/storage/bdev.py`. Actually, the differences
-between implementing inside and outside (external) Ganeti are how to
-finish these functions in BlockDev class and how to combine with Ganeti
-itself. The internal implementation is not based on external scripts
-and combines with Ganeti in a more compact way. RBD patches may be a
-good reference here. Adding a backend storage steps are as follows:
+1. Mount the Gluster volume.
+2. Use files stored in the volume as instance disks.
 
-- Implement the BlockDev interface in bdev.py.
-- Add the logic in cmdlib (eg, migration, verify).
-- Add the new storage type name to constants.
-- Modify objects.Disk to support GlusterFS storage type.
-- The implementation will be performed similarly to the RBD one (see
-  commit 7181fba).
+In other words, Gluster storage is a shared file storage backend, essentially.
+Ganeti just needs to mount and unmount the Gluster volume(s) appropriately
+before and after operation.
 
-GlusterFS side
---------------
+Since it is not strictly necessary for Gluster to mount the disk if all that's
+needed is userspace access, however, it is inappropriate for the Gluster storage
+class to inherit from FileStorage. So we should resort to composition rather
+than inheritance:
 
-GlusterFS is a distributed file system implemented in user space.
-The way to access GlusterFS namespace is via FUSE based Gluster native
-client except NFS and CIFS. The efficiency of this way is lower because
-the data would be pass the kernel space and then come to user space.
-Now, there are two specific enhancements:
+- Extract the FileStorage behavior into a FileDeviceHelper class.
+- Use the FileDeviceHelper class to implement a GlusterStorage class
 
-- A new library called libgfapi is now available as part of GlusterFS
-  that provides POSIX-like C APIs for accessing Gluster volumes.
-  libgfapi support will be available from GlusterFS-3.4 release.
-- QEMU/KVM (starting from QEMU-1.3) will have GlusterFS block driver that
-  uses libgfapi and hence there is no FUSE overhead any longer when QEMU/KVM
-  works with VM images on Gluster volumes.
+In order not to further inflate bdev.py, we should move FileStorage together
+with its helper function (thus reducing their visibility) and add Gluster to its
+own file, gluster.py. Moving the other classes to their own files (like it's
+been done in lib/hypervisor/) is probably outside the scope of a patch series
+that simply aims to implement Gluster.
 
-Proposed implementation
------------------------
+Changes to the storage types system
+===================================
 
-QEMU/KVM includes support for GlusterFS and Ganeti could support GlusterFS
-through QEMU/KVM. However, this way could just let VMs of QEMU/KVM use GlusterFS
-backend storage but not other VMs like XEN and such. There are two parts that need
-to be implemented for supporting GlusterFS inside Ganeti so that it can not only
-support QEMU/KVM VMs, but also XEN and other VMs. One part is GlusterFS for XEN VM,
-which is similar to sharedfile disk template. The other part is GlusterFS for
-QEMU/KVM VM, which is supported by the GlusterFS driver for QEMU/KVM. After
-``gnt-instance add -t gluster instance.example.com`` command is executed, the added
-instance should be checked. If the instance is a XEN VM, it would run the GlusterFS
-sharedfile way. However, if the instance is a QEMU/KVM VM, it would run the
-QEMU/KVM + GlusterFS way. For the first part (GlusterFS for XEN VMs), sharedfile
-disk template would be a good reference. For the second part (GlusterFS for QEMU/KVM
-VMs), RBD disk template would be a good reference. The first part would be finished
-at first and then the second part would be completed, which is based on the first
-part.
+Ganeti has a number of storage types that abstract over disk templates. This
+matters mainly in terms of disk space reporting. Gluster support is improved by
+a rethinking of how disk templates are assigned to storage types in Ganeti.
+
++--------------+---------+--------------+-------------------------------------+
+|Disk template | Before  | After        | Characteristics                     |
++==============+=========+==============+=====================================+
+| File         | File    | File storage | - ``gnt-node list`` enabled         |
+|              | storage | type         | - ``gnt-node list-storage`` enabled |
+|              | type    |              | - ``hail`` uses disk information    |
++--------------+         +--------------+-------------------------------------+
+| Shared file  |         | Shared file  | - ``gnt-node`` list disabled        |
++--------------+---------+ storage type | - ``gnt-node`` list-storage enabled |
+| Gluster (new)| N/A     | (new)        | - ``hail`` ignores disk information |
++--------------+---------+--------------+-------------------------------------+
+
+The rationale is simple. For shared file and gluster storage, disk space is not
+a function of any one node. If storage types with disk space reporting are used,
+Hail expects them to give useful numbers for allocation purposes, but a shared
+storage system means disk balancing is not affected by node-instance allocation
+any longer. Moreover, it would be wasteful to mount a Gluster volume on each
+node just for running statvfs() if no machine was actually running gluster
+VMs.
+
+As a result, Gluster support for gnt-node list-storage is necessarily limited
+and nodes on which Gluster is available but not in use will report failures.
+Additionally, running gnt-node list will give an output like this::
+
+  Node              DTotal DFree MTotal MNode MFree Pinst Sinst
+  node1.example.com      ?     ?   744M  273M  477M     0     0
+  node2.example.com      ?     ?   744M  273M  477M     0     0
+
+This is expected and consistent with behaviour in RBD. A future improvement may
+involve not displaying those columns at all in the command output unless
+per-node disk resources are actually in use.
+
+Gluster deployment by Ganeti
+============================
+
+Basic GlusterFS deployment is relatively simple:
+
+1. Create bricks on nodes 1..n
+2. Mount them to /export/brick1/gluster
+3. On nodes 2..n, run `gluster peer probe`
+4. On node 1, run `gluster volume create`, enumerating all bricks.
+5. On node 1, run `gluster volume start`
+
+From here onwards, however, the sky's the limit. Gluster has support for
+translators, essentially "pure transformations" of simpler volumes. The
+`distribute` translator, for example, takes arbitrary "subvolumes" and
+distributes files amongst them, offering as output the union "subvolume".
+Gluster uses this translator by default, but there are some that aren't
+and might be useful for us, such as a translator that creates a block
+device for us. Unfortunately the documentation here is lacking.
+
+This will however need to wait for larger availability of QEMU version
+1.3+ in our supported distributions. On Debian Wheezy, userspace support
+requires compiling from source `both` QEMU (version 1.3 or newer) `and`
+Gluster (the packaged version does not build a library required for QEMU
+support). Right now there are likely more pressing priorities such as
+support for QEMU 1.6 in the upcoming Ubuntu 14.04 release.
 
 .. vim: set textwidth=72 :
 .. Local Variables:
