@@ -37,18 +37,31 @@ GlusterFS support will be added directly inside Ganeti.
 Implementation Plan
 ===================
 
-Ganeti Side
+Ganeti side
 -----------
 
-To realize an internal storage backend for Ganeti, one should realize
-BlockDev class in `ganeti/lib/storage/base.py` that is a specific
-class including create, remove and such. These functions should be
-realized in `ganeti/lib/storage/bdev.py`. Actually, the differences
-between implementing inside and outside (external) Ganeti are how to
-finish these functions in BlockDev class and how to combine with Ganeti
-itself. The internal implementation is not based on external scripts
-and combines with Ganeti in a more compact way. RBD patches may be a
-good reference here. Adding a backend storage steps are as follows:
+Working with GlusterFS in kernel space essentially boils down to two steps:
+
+1. Mount the Gluster volume.
+2. Use files stored in the volume as instance disks.
+
+In other words, Gluster storage is a shared file storage backend, essentially.
+Ganeti just needs to mount and unmount the Gluster volume(s) appropriately
+before and after operation.
+
+Since it is not strictly necessary for Gluster to mount the disk if all that's
+needed is userspace access, however, it is inappropriate for the Gluster storage
+class to inherit from FileStorage. So we should resort to composition rather
+than inheritance:
+
+- Extract the FileStorage behavior into a FileDeviceHelper class.
+- Use the FileDeviceHelper class to implement a GlusterStorage class
+
+In order not to further inflate bdev.py, we should move FileStorage together
+with its helper function (thus reducing their visibility) and add Gluster to its
+own file, gluster.py. Moving the other classes to their own files (like it's
+been done in lib/hypervisor/) is probably outside the scope of a patch series
+that simply aims to implement Gluster.
 
 - Implement the BlockDev interface in bdev.py.
 - Add the logic in cmdlib (eg, migration, verify).
