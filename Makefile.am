@@ -421,7 +421,8 @@ storage_PYTHON = \
 	lib/storage/drbd.py \
 	lib/storage/drbd_info.py \
 	lib/storage/drbd_cmdgen.py \
-	lib/storage/filestorage.py
+	lib/storage/filestorage.py \
+	lib/storage/gluster.py
 
 rapi_PYTHON = \
 	lib/rapi/__init__.py \
