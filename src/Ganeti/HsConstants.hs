@@ -797,6 +797,9 @@ dtRbd = Types.diskTemplateToRaw DTRbd
 dtExt :: String
 dtExt = Types.diskTemplateToRaw DTExt
 
+dtGluster :: String
+dtGluster = Types.diskTemplateToRaw DTGluster
+
 -- | This is used to order determine the default disk template when
 -- the list of enabled disk templates is inferred from the current
 -- state of the cluster.  This only happens on an upgrade from a
@@ -804,8 +807,8 @@ dtExt = Types.diskTemplateToRaw DTExt
 -- so far.
 diskTemplatePreference :: [String]
 diskTemplatePreference =
-  map Types.diskTemplateToRaw
-  [DTBlock, DTDiskless, DTDrbd8, DTExt, DTFile, DTPlain, DTRbd, DTSharedFile]
+  map Types.diskTemplateToRaw [DTBlock, DTDiskless, DTDrbd8, DTExt, DTFile,
+                               DTPlain, DTRbd, DTSharedFile, DTGluster]
 
 diskTemplates :: FrozenSet String
 diskTemplates = ConstantUtils.mkSet $ map Types.diskTemplateToRaw [minBound..]
@@ -826,7 +829,8 @@ mapDiskTemplateStorageType =
    (DTFile, StorageFile),
    (DTDiskless, StorageDiskless),
    (DTPlain, StorageLvmVg),
-   (DTRbd, StorageRados)]
+   (DTRbd, StorageRados),
+   (DTGluster, StorageFile)]
 
 -- | The set of network-mirrored disk templates
 dtsIntMirror :: FrozenSet String
@@ -836,21 +840,22 @@ dtsIntMirror = ConstantUtils.mkSet [dtDrbd8]
 dtsExtMirror :: FrozenSet String
 dtsExtMirror =
   ConstantUtils.mkSet $
-  map Types.diskTemplateToRaw [DTDiskless, DTBlock, DTExt, DTSharedFile, DTRbd]
+  map Types.diskTemplateToRaw
+  [DTDiskless, DTBlock, DTExt, DTSharedFile, DTRbd, DTGluster]
 
 -- | The set of non-lvm-based disk templates
 dtsNotLvm :: FrozenSet String
 dtsNotLvm =
   ConstantUtils.mkSet $
   map Types.diskTemplateToRaw
-  [DTSharedFile, DTDiskless, DTBlock, DTExt, DTFile, DTRbd]
+  [DTSharedFile, DTDiskless, DTBlock, DTExt, DTFile, DTRbd, DTGluster]
 
 -- | The set of disk templates which can be grown
 dtsGrowable :: FrozenSet String
 dtsGrowable =
   ConstantUtils.mkSet $
   map Types.diskTemplateToRaw
-  [DTSharedFile, DTDrbd8, DTPlain, DTExt, DTFile, DTRbd]
+  [DTSharedFile, DTDrbd8, DTPlain, DTExt, DTFile, DTRbd, DTGluster]
 
 -- | The set of disk templates that allow adoption
 dtsMayAdopt :: FrozenSet String
@@ -868,7 +873,8 @@ dtsMirrored = dtsIntMirror `ConstantUtils.union` dtsExtMirror
 -- | The set of file based disk templates
 dtsFilebased :: FrozenSet String
 dtsFilebased =
-  ConstantUtils.mkSet $ map Types.diskTemplateToRaw [DTSharedFile, DTFile]
+  ConstantUtils.mkSet $ map Types.diskTemplateToRaw
+  [DTSharedFile, DTFile, DTGluster]
 
 -- | The set of disk templates that can be moved by copying
 --
@@ -886,7 +892,7 @@ dtsExclStorage = ConstantUtils.mkSet $ map Types.diskTemplateToRaw [DTPlain]
 dtsNoFreeSpaceCheck :: FrozenSet String
 dtsNoFreeSpaceCheck =
   ConstantUtils.mkSet $
-  map Types.diskTemplateToRaw [DTExt, DTSharedFile, DTFile, DTRbd]
+  map Types.diskTemplateToRaw [DTExt, DTSharedFile, DTFile, DTRbd, DTGluster]
 
 dtsBlock :: FrozenSet String
 dtsBlock =
@@ -3790,6 +3796,7 @@ diskDtDefaults =
                    , (rbdAccess, PyValueEx diskKernelspace)
                    ])
   , (DTSharedFile, Map.empty)
+  , (DTGluster,    Map.empty)
   ]
 
 niccDefaults :: Map String PyValueEx
