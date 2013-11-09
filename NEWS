@@ -15,6 +15,7 @@ New features
 
 - Instance moves, backups and imports can now use compression to transfer the
   instance data.
+- Added support for Gluster distributed file storage.
 
 
 Version 2.10.0 alpha1
