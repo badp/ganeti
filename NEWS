@@ -23,6 +23,7 @@ New features
   instance data.
 - Node groups can be configured to use an SSH port different than the
   default 22.
+- Added support for Gluster distributed file storage.
 
 
 Version 2.10.0 alpha1
