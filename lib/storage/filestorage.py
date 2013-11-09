@@ -32,6 +32,7 @@ from ganeti import constants
 from ganeti import errors
 from ganeti import pathutils
 from ganeti import utils
+from ganeti.utils import io
 from ganeti.storage import base
 
 
