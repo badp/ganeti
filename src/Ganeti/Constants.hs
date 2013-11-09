@@ -4570,3 +4570,9 @@ errorsEcodeAll =
 
 jstoreJobsPerArchiveDirectory :: Int
 jstoreJobsPerArchiveDirectory = 10000
+
+-- * Gluster settings
+
+-- | Where Ganeti should manage Gluster volume mountpoints
+glusterMountpoint :: String
+glusterMountpoint = "/var/run/ganeti/gluster"

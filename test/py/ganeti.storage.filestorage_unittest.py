@@ -219,5 +219,90 @@ class TestCheckFileStoragePathExistance(testutils.GanetiTestCase):
                       "/usr/lib64/xyz", _filename=tmpfile)
 
 
+class TestGlusterVolume(unittest.TestCase):
+
+  last_vol_name = 0
+
+  @classmethod
+  def makeVolume(cls, ipv = 4, addr=None, port = 9001,
+                 run_cmd = NotImplemented,
+                 clone_previous=False,
+                 name=None):
+
+    address = {4: "74.65.28.66",
+               6: "74:65::28:6:69",
+              } # T9
+
+    vol_name = TestGlusterVolume.last_vol_name
+    if name:
+      vol_name = name
+    else:
+      try:
+        vol_name = int(vol_name)
+        vol_name += 1 if not clone_previous else 0
+      except:
+        vol_name = 0 if not clone_previous else vol_name
+
+    return filestorage.GlusterVolume(address[ipv] if not addr else addr,
+                                     port,
+                                     str(vol_name),
+                                     _run_cmd=run_cmd
+                                    )
+
+    TestGlusterVolume.last_vol_name = vol_name
+
+  def setUp(self):
+    self.result_failed = utils.RunResult(1, None, "", "", "", None, None)
+    self.mock_okay_run_cmd = mock.Mock(return_value=RESULT_OK)
+    self.result_ok = utils.RunResult(0, None, "", "", "", None, None)
+    self.mock_fail_run_cmd = mock.Mock(return_value=RESULT_FAILED)
+
+    # Create some volumes.
+    self.vol_a = TestGlusterVolume.makeVolume()
+    self.vol_a_clone = TestGlusterVolume.makeVolume(clone_previous = True)
+    self.vol_b = TestGlusterVolume.makeVolume()
+
+  def TestEquality(self):
+    self.assertEqual(self.vol_a, self.vol_a_clone)
+
+  def TestInequality(self):
+    self.assertNotEqual(self.vol_a, self.vol_b)
+
+  def TestDictionary(self):
+    dictionary = {}
+    dictionary[self.vol_a] = "pink bunny"
+    self.assertEqual("pink_bunny", dictionary.get(self.vol_a_clone, "Error"))
+    self.assertRaises(KeyError, lambda: dictionary[self.vol_b])
+
+  def TestHostnameResolution(self):
+    vol_1 = makeVolume(addr="localhost")
+    self.assertEqual(vol_1.server_ip, "127.0.0.1")
+    self.assertRaises(errors.ResolverError, lambda: makeVolume(addr="E_NOENT"))
+
+  def TestKVMGlusterFSURIs(self):
+    # The only source of documentation I can find is:
+    #   https://github.com/qemu/qemu/commit/8d6d89c
+    # This test gets as close as possible to the examples given there,
+    # within the limits of our implementation (no transport specification,
+    #                                          no default port version).
+
+    vol_1 = makeVolume(addr="1.2.3.4", port=24007, name="testvol")
+    self.assertEqual(vol_1.GetKVMMountString("dir/a.img"),
+                     "gluster://1.2.3.4:24007/testvol/dir/a.img")
+
+    vol_2 = makeVolume(addr="1:2:3:4:5:6:7:8", port=24007, name="testvol")
+    self.assertEqual(vol_1.GetKVMMountString("dir/a.img"),
+                     "gluster://[1:2:3:4:5:6:7:8]:24007/testvol/dir/a.img")
+
+    # Technically KVM could do name resolution on its own, but we don't do that
+    # for mount point deduplication purposes.
+    vol_3 = makeVolume(addr="localhost", port=24007, name="testvol")
+    self.assertEqual(vol_1.GetKVMMountString("dir/a.img"),
+                     "gluster://127.0.0.1:24007/testvol/dir/a.img")
+
+  def TestPathAcceptance(self):
+    #Simply check no exceptions are raised.
+    filestorage.CheckFileStoragePathAcceptance(vol_1.mount_point)
+
 if __name__ == "__main__":
   testutils.GanetiTestProgram()
