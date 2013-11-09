@@ -33,6 +33,7 @@ from ganeti import utils
 from ganeti import errors
 from ganeti import netutils
 from ganeti import ssconf
+from ganeti import constants
 
 from ganeti.utils import io
 from ganeti.storage import base
@@ -264,28 +265,40 @@ class GlusterVolume(object):
 class GlusterStorage(base.BlockDev):
   """File device.
 
-  This class represents a file storage backend device stored on Gluster. The
-  system administrator must mount the Gluster device himself at boot time before
-  Ganeti is run.
+  This class represents a file storage backend device stored on Gluster. Ganeti
+  mounts and unmounts the Gluster devices automatically.
 
   The unique_id for the file device is a (file_driver, file_path) tuple.
 
   """
   def __init__(self, unique_id, children, size, params, dyn_params,
-               _file_helper_obj=None):
+               _file_helper_obj=None, _volume_obj=None):
     """Initalizes a file device backend.
 
     """
     if children:
       raise errors.BlockDeviceError("Invalid setup for file device")
-    super(GlusterStorage, self).__init__(unique_id, children, size, params,
-                                         dyn_params)
-    if not isinstance(unique_id, (tuple, list)) or len(unique_id) != 2:
-      raise ValueError("Invalid configuration data %s" % str(unique_id))
-    self.driver = unique_id[0]
-    self.dev_path = unique_id[1]
 
-    self.file = FileDeviceHelper(self.dev_path)
+    try:
+      driver, path = unique_id
+    except ValueError: # wrong number of arguments
+      raise ValueError("Invalid configuration data %s" % repr(unique_id))
+
+    server_addr = params[constants.GLUSTER_HOST]
+    port = params[constants.GLUSTER_PORT]
+    volume = params[constants.GLUSTER_VOLUME]
+
+    if _volume_obj:
+      self.volume = _volume_obj
+    else:
+      self.volume = GlusterVolume(server_addr, port, volume)
+    self.path = path
+    self.driver = driver
+    self.full_path = io.PathJoin(self.volume.mount_point, self.path)
+    self.file = None if not _file_helper_obj else _file_helper_obj
+
+    super(GlusterStorage, self).__init__(unique_id, children, size,
+                                         params, dyn_params)
 
     self.Attach()
 
@@ -320,7 +333,6 @@ class GlusterStorage(base.BlockDev):
     """Notifies that the device will no longer be used for I/O.
 
     This is a no-op for the file type.
-
     """
     pass
 
@@ -331,7 +343,10 @@ class GlusterStorage(base.BlockDev):
     @return: True if the removal was successful
 
     """
-    self.file.Remove()
+    with self.volume:
+      self.file = FileDeviceHelper(self.full_path, constants.DT_GLUSTER)
+      self.file.Remove()
+    self.file = None
     return True
 
   def Rename(self, new_id):
@@ -390,8 +405,23 @@ class GlusterStorage(base.BlockDev):
     if not isinstance(unique_id, (tuple, list)) or len(unique_id) != 2:
       raise ValueError("Invalid configuration data %s" % str(unique_id))
 
-    dev_path = unique_id[1]
+    full_path = unique_id[1]
 
-    file_helper = FileDeviceHelper(dev_path, create_with_size=size)
+    server_addr = params[constants.GLUSTER_HOST]
+    port = params[constants.GLUSTER_PORT]
+    volume = params[constants.GLUSTER_VOLUME]
+
+    volume_obj = GlusterVolume(server_addr, port, volume)
+    full_path = io.PathJoin(volume_obj.mount_point, full_path)
+
+    # Possible optimization: defer actual creation to first Attach, rather
+    # than mounting and unmounting here, then remounting immediately after.
+    with volume_obj:
+      file_helper_obj = FileDeviceHelper(full_path,
+                                         constants.DT_GLUSTER,
+                                         create_with_size=size,
+                                         create_folder=True)
+
     return GlusterStorage(unique_id, children, size, params, dyn_params,
-                          _file_helper_obj=file_helper)
+                          _volume_obj=volume_obj,
+                          _file_helper_obj=file_helper_obj)
