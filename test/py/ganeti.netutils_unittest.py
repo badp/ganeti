@@ -531,5 +531,28 @@ class TestIpParsing(testutils.GanetiTestCase):
                     addr[4][0] == "192.0.2.1")
 
 
+class TestValidatePortNumber(unittest.TestCase):
+  """Test netutils.ValidatePortNumber"""
+  fn = netutils.ValidatePortNumber
+
+  def testPortNumberInt(self):
+    self.assertRaises(ValueError, lambda: \
+      netutils.ValidatePortNumber(500000))
+    self.assertEqual(netutils.ValidatePortNumber(5000), 5000)
+
+  def testPortNumberStr(self):
+    self.assertRaises(ValueError, lambda: \
+      netutils.ValidatePortNumber("pinky bunny"))
+    self.assertEqual(netutils.ValidatePortNumber("5000"), 5000)
+
+  def testPortNumberObj(self):
+    self.assertRaises(errors.ProgrammerError, lambda: \
+      netutils.ValidatePortNumber(object))
+    class AlmostButNotQuiteEntirelyUnlikeInt:
+      def __int__(self):
+        return 5000
+    tea = AlmostButNotQuiteEntirelyUnlikeInt()
+    self.assertEqual(netutils.ValidatePortNumber(tea), 5000)
+
 if __name__ == "__main__":
   testutils.GanetiTestProgram()
