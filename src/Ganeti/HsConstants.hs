@@ -4317,3 +4317,9 @@ diskRemoveRetryTimeout = 30
 -- | Interval between disk removal retries (seconds)
 diskRemoveRetryInterval :: Int
 diskRemoveRetryInterval  = 3
+
+-- * Gluster settings
+
+-- | Where Ganeti should mount Gluster volumes
+glusterMountpoint :: String
+glusterMountpoint = "/mnt/gluster"

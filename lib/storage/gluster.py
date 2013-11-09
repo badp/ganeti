@@ -25,10 +25,125 @@ behaves essentially like a regular file system. Unlike RBD, there are no
 special provisions for block device abstractions (yet).
 
 """
+import logging
 
+from ganeti import utils
 from ganeti import errors
+from ganeti import netutils
+from ganeti import constants
+
+from ganeti.utils import io
 from ganeti.storage import base
 from ganeti.storage.filestorage import FileDeviceHelper
+
+
+class GlusterVolume(object):
+  """This class represents a Gluster volume.
+
+  Volumes are uniquely identified by:
+
+    - their IP address
+    - their port
+    - the volume name itself
+
+  Two GlusterVolume objects x, y with same IP address, port and volume name
+  are considered equal. connection_count makes sure that mounts and unmounts to
+  equal volumes are not made multiple times.
+  """
+
+  connection_count = {}
+  """Tracks how many drives are being used on the same Gluster volume.
+  """ # pylint: disable=W0105
+
+  def __init__(self, server_addr, port, volume, _run_cmd=utils.RunCmd):
+    self.server_addr = server_addr
+    server_ip = netutils.Hostname.GetIP(self.server_addr)
+    self._server_ip = server_ip
+    port = netutils.ValidatePortNumber(port)
+    self._port = port
+    self._volume = volume
+    self.mount_point = constants.GLUSTER_MOUNTPOINT
+
+    self._run_cmd = _run_cmd
+
+    self._mounted = False
+    """self._mounted is True is self counts towards a volume's connection count.
+
+    """ # pylint: disable=W0105
+
+  # This object is hashable and has custom equality, so we must do a little
+  # extra work to guarantee the immutability of its core parts.
+
+  @property
+  def server_ip(self):
+    return self._server_ip
+
+  @property
+  def port(self):
+    return self._port
+
+  @property
+  def volume(self):
+    return self._volume
+
+  def __eq__(self, other):
+    # The hash has full knowledge of the important bits, so let's use it.
+    return self.__hash__() == other.__hash__()
+
+  def __repr__(self):
+    # This is used by __hash__ and __eq__, be careful.
+    # Two GlusterVolumes with the same __repr__ are considered the same
+    # for connection_count purposes.
+    return """GlusterVolume("{ip}", {port}, "{volume}")""" \
+             .format(ip=self.server_ip, port=self.port, volume=self.volume)
+
+  def __hash__(self):
+    return self.__repr__().__hash__()
+
+  def _GetFUSEMountString(self):
+    return "{ip}:{port}:/{volume}" \
+             .format(ip=self.server_ip, port=self.port, volume=self.volume)
+
+  def GetKVMMountString(self, path):
+    ip = self.server_ip
+    if ":" in self.server_ip: # IPv6 addresses need []-quoting
+      ip = "[%s]" % ip
+    return "gluster://{ip}:{port}/{volume}/{path}" \
+             .format(ip=ip, port=self.port, volume=self.volume, path=path)
+
+  def Mount(self):
+    if self._mounted:
+      return
+    count = GlusterVolume.connection_count.get(self, 0)
+    if count > 0:
+      pass # We're already mounted!
+    else:
+      result = self._run_cmd(["mount",
+                              "-t", "glusterfs",
+                              self._GetFUSEMountString(),
+                              self.mount_point
+                             ])
+      if result.failed:
+        raise errors.BlockDeviceError(
+          "Failed to mount %s: %s" % (repr(self), result.fail_reason)
+        )
+    self._mounted = True
+    GlusterVolume.connection_count[self] = count + 1
+
+  def Unmount(self):
+    if not self._mounted:
+      return
+    count = GlusterVolume.connection_count[self] - 1
+    if count > 0:
+      pass # Other volumes are still using this connection.
+    else:
+      result = self._run_cmd(["umount", self.mount_point])
+      if result.failed: # Not awesome, but not a show-stopper either.
+        logging.warning("Failed to unmount %s: %s",
+                        repr(self), result.fail_reason)
+        return # do not update _mounted and connection_count
+    self._mounted = False
+    GlusterVolume.connection_count[self] = count
 
 
 class GlusterStorage(base.BlockDev):
