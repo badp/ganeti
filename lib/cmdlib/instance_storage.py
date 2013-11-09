@@ -460,6 +460,12 @@ def GenerateDiskTemplate(
         vg = disk.get(constants.IDISK_VG, vgname)
         return (vg, names[idx])
 
+    elif template_name == constants.DT_GLUSTER:
+      logical_id_fn = \
+        lambda _, disk_index, disk: (file_driver,
+                                     "ganeti/%s.%d" % (instance_uuid,
+                                                       disk_index))
+
     elif template_name in constants.DTS_FILEBASED:
       logical_id_fn = \
         lambda _, disk_index, disk: (file_driver,

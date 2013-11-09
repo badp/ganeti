@@ -36,7 +36,7 @@ from ganeti.storage import base
 
 
 class FileDeviceHelper(object):
-  def __init__(self, path, create_with_size=None, create_folder=False):
+  def __init__(self, path, create_with_size=None):
     """Create a new file.
 
     @param create_with_size: do not attempt to open an existing file; instead
@@ -46,9 +46,6 @@ class FileDeviceHelper(object):
 
     CheckFileStoragePathAcceptance(path)
     self.path = path
-    if create_folder:
-      folder = os.path.dirname(path)
-      io.Makedirs(folder)
     if create_with_size:
       try:
         fd = os.open(path, os.O_RDWR | os.O_CREAT | os.O_EXCL)

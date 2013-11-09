@@ -3764,6 +3764,12 @@ diskLdDefaults =
             , (ldpAccess, PyValueEx diskKernelspace)
             ])
   , (DTSharedFile, Map.empty)
+  , (DTGluster, Map.fromList
+                [ (rbdAccess, PyValueEx diskKernelspace)
+                , (glusterHost, PyValueEx glusterHostDefault)
+                , (glusterVolume, PyValueEx glusterVolumeDefault)
+                , (glusterPort, PyValueEx glusterPortDefault)
+                ])
   ]
 
 diskDtDefaults :: Map DiskTemplate (Map String PyValueEx)
@@ -3796,7 +3802,12 @@ diskDtDefaults =
                    , (rbdAccess, PyValueEx diskKernelspace)
                    ])
   , (DTSharedFile, Map.empty)
-  , (DTGluster,    Map.empty)
+  , (DTGluster,    Map.fromList
+                   [ (rbdAccess, PyValueEx diskKernelspace)
+                   , (glusterHost, PyValueEx glusterHostDefault)
+                   , (glusterVolume, PyValueEx glusterVolumeDefault)
+                   , (glusterPort, PyValueEx glusterPortDefault)
+                   ])
   ]
 
 niccDefaults :: Map String PyValueEx
@@ -4323,3 +4334,27 @@ diskRemoveRetryInterval  = 3
 -- | Where Ganeti should mount Gluster volumes
 glusterMountpoint :: String
 glusterMountpoint = AutoConf.glusterMountpoint
+
+-- | Name of the Gluster host setting
+glusterHost :: String
+glusterHost = "host"
+
+-- | Default value of the Gluster host setting
+glusterHostDefault :: String
+glusterHostDefault = "127.0.0.1"
+
+-- | Name of the Gluster volume setting
+glusterVolume :: String
+glusterVolume = "volume"
+
+-- | Default value of the Gluster volume setting
+glusterVolumeDefault :: String
+glusterVolumeDefault = "gv0"
+
+-- | Name of the Gluster port setting
+glusterPort :: String
+glusterPort = "port"
+
+-- | Default value of the Gluster port setting
+glusterPortDefault :: Int
+glusterPortDefault = 24007

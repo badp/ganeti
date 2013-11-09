@@ -868,7 +868,10 @@ class LUInstanceCreate(LogicalUnit):
       if self.op.file_storage_dir is not None:
         joinargs.append(self.op.file_storage_dir)
 
-      joinargs.append(self.op.instance_name)
+      if self.op.disk_template != constants.DT_GLUSTER:
+        joinargs.append(self.op.instance_name)
+      else:
+        joinargs.append("ganeti")
 
       # pylint: disable=W0142
       self.instance_file_storage_dir = utils.PathJoin(*joinargs)
