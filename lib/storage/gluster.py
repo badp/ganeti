@@ -296,3 +296,15 @@ class GlusterStorage(base.BlockDev):
     file_helper = FileDeviceHelper(dev_path, create_with_size=size)
     return GlusterStorage(unique_id, children, size, params, dyn_params,
                           _file_helper_obj=file_helper)
+
+  def GetUserspaceAccessUri(self, hypervisor):
+    """Generate KVM userspace URIs to be used as `-drive file` settings.
+
+    @see: L{BlockDev.GetUserspaceAccessUri}
+    @see: https://github.com/qemu/qemu/commit/8d6d89cb63c57569864ecdeb84d3a1c2eb
+    """
+    if hypervisor == constants.HT_KVM:
+      return self.volume.GetKVMMountString(self.path)
+    else:
+      base.ThrowError("Hypervisor %s doesn't support Gluster userspace access" %
+                      hypervisor)
