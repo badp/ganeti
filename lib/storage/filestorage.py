@@ -32,6 +32,7 @@ from ganeti import errors
 from ganeti import compat
 from ganeti import constants
 from ganeti import pathutils
+from ganeti.utils import io
 from ganeti.storage import base
 
 
@@ -51,6 +52,7 @@ class FileDeviceHelper(object):
     if create_folder:
       folder = os.path.dirname(path)
       io.Makedirs(folder)
+
     if create_with_size:
       try:
         fd = os.open(path, os.O_RDWR | os.O_CREAT | os.O_EXCL)
