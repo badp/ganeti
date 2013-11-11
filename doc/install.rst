@@ -418,6 +418,12 @@ only need to specify the IP addresses of the RADOS Cluster monitors.
 For more information, please see the `Ceph Docs
 <http://ceph.newdream.net/docs/latest/>`_
 
+Installing Gluster
+++++++++++++++++++
+
+For Gluster integration, Ganeti requires that FUSE support is available
+in the kernel of the host.
+
 Other required software
 +++++++++++++++++++++++
 
