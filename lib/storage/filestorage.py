@@ -79,8 +79,7 @@ def _GetForbiddenFileStoragePaths():
   return compat.UniqueFrozenset(map(os.path.normpath, paths))
 
 
-def _ComputeWrongFileStoragePaths(paths,
-                                  _forbidden=_GetForbiddenFileStoragePaths()):
+def _ComputeWrongFileStoragePaths(paths, _forbidden=None):
   """Cross-checks a list of paths for prefixes considered bad.
 
   Some paths, e.g. "/bin", should not be used for file storage.
@@ -91,6 +90,9 @@ def _ComputeWrongFileStoragePaths(paths,
   @return: Sorted list of paths for which the user should be warned
 
   """
+  if _forbidden is None:
+    _forbidden = _GetForbiddenFileStoragePaths()
+
   def _Check(path):
     return (not os.path.isabs(path) or
             path in _forbidden or
