@@ -271,6 +271,16 @@ AC_SUBST(NODED_GROUP, $group_noded)
 AC_SUBST(DAEMONS_GROUP, $group_daemons)
 AC_SUBST(MOND_GROUP, $group_mond)
 
+# --with-gluster-mountpoint=...
+AC_ARG_WITH([gluster-mountpoint],
+  [AS_HELP_STRING([--with-gluster-mountpoint=DIR],
+    [path where Ganeti will mount Gluster volumes on each node]
+    [ as necessary.]
+  )],
+  [GLUSTER_MOUNTPOINT="$withval"],
+  [GLUSTER_MOUNTPOINT="/mnt/gluster"])
+AC_SUBST(GLUSTER_MOUNTPOINT, $GLUSTER_MOUNTPOINT)
+
 # Print the config to the user
 AC_MSG_NOTICE([Running ganeti-masterd as $group_masterd:$group_masterd])
 AC_MSG_NOTICE([Running ganeti-rapi as $user_rapi:$group_rapi])

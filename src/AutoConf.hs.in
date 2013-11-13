@@ -214,6 +214,9 @@ enableMond = ENABLE_MOND
 hasGnuLn :: Bool
 hasGnuLn = HAS_GNU_LN
 
+glusterMountpoint :: String
+glusterMountpoint = GLUSTER_MOUNTPOINT
+
 -- Write dictionary with man page name as the key and the section
 -- number as the value
 manPages :: [(String, Int)]

@@ -4322,4 +4322,4 @@ diskRemoveRetryInterval  = 3
 
 -- | Where Ganeti should mount Gluster volumes
 glusterMountpoint :: String
-glusterMountpoint = "/mnt/gluster"
+glusterMountpoint = AutoConf.glusterMountpoint
