@@ -28,7 +28,9 @@ import unittest
 
 from ganeti import errors
 from ganeti.storage import filestorage
+from ganeti.utils import io
 from ganeti import utils
+from ganeti import constants
 
 import testutils
 
@@ -86,13 +88,15 @@ class TestCheckFileStoragePath(unittest.TestCase):
     path = os.path.join(self.allowed_paths[0], "allowedsubdir")
     os.mkdir(path)
     result = filestorage.CheckFileStoragePath(
-        path, _allowed_paths_file=self.allowed_paths_filename)
+        path, constants.DT_FILE,
+        _allowed_paths_file=self.allowed_paths_filename)
     self.assertEqual(None, result)
 
   def testCheckFileStoragePathNotAllowed(self):
     path = os.path.join(self.tmpdir, "notallowed")
     result = filestorage.CheckFileStoragePath(
-        path, _allowed_paths_file=self.allowed_paths_filename)
+        path, constants.DT_FILE,
+        _allowed_paths_file=self.allowed_paths_filename)
     self.assertTrue("not acceptable" in result)
 
 
@@ -191,12 +195,17 @@ class TestCheckFileStoragePathExistance(testutils.GanetiTestCase):
   def testNonExistantFile(self):
     filename = "/tmp/this/file/does/not/exist"
     assert not os.path.exists(filename)
-    self.assertRaises(errors.FileStoragePathError,
-                      filestorage.CheckFileStoragePathAcceptance, "/bin/",
-                      _filename=filename)
-    self.assertRaises(errors.FileStoragePathError,
-                      filestorage.CheckFileStoragePathAcceptance,
-                      "/srv/file-storage", _filename=filename)
+    for disk_template in constants.DTS_FILEBASED:
+      self.assertRaises(errors.FileStoragePathError,
+                        filestorage.CheckFileStoragePathAcceptance,
+                        "/bin/",
+                        disk_template,
+                        _filename=filename)
+      self.assertRaises(errors.FileStoragePathError,
+                        filestorage.CheckFileStoragePathAcceptance,
+                        "/srv/file-storage",
+                        disk_template,
+                        _filename=filename)
 
   def testAllowedPath(self):
     tmpfile = self._CreateTempFile()
@@ -205,18 +214,57 @@ class TestCheckFileStoragePathExistance(testutils.GanetiTestCase):
       /srv/storage
       """)
 
-    filestorage.CheckFileStoragePathAcceptance(
-        "/srv/storage/inst1", _filename=tmpfile)
+    okay_path = {
+      constants.DT_FILE: "/srv/storage/inst1",
+      constants.DT_SHARED_FILE: "/srv/storage/inst2",
+      constants.DT_GLUSTER: utils.io.PathJoin(constants.GLUSTER_MOUNTPOINT,
+                                              "inst1"),
+    }
 
-    # No additional path component
-    self.assertRaises(errors.FileStoragePathError,
-                      filestorage.CheckFileStoragePathAcceptance,
-                      "/srv/storage", _filename=tmpfile)
+    bad_path = {
+      constants.DT_FILE: "/srv/storage",
+      constants.DT_SHARED_FILE: "/srv/storage",
+      constants.DT_GLUSTER: constants.GLUSTER_MOUNTPOINT,
+    }
 
-    # Forbidden path
-    self.assertRaises(errors.FileStoragePathError,
-                      filestorage.CheckFileStoragePathAcceptance,
-                      "/usr/lib64/xyz", _filename=tmpfile)
+    forbidden_path = {
+      constants.DT_FILE: "/usr/lib64/xyz",
+      constants.DT_SHARED_FILE: "/bin/xyz",
+      constants.DT_GLUSTER: "/sys/xyz",
+    }
+
+    # Check invalid disk template.
+    self.assertRaises(errors.ProgrammerError, lambda:
+      filestorage.CheckFileStoragePathAcceptance("foo", constants.DT_RBD))
+
+    for dt in constants.DTS_FILEBASED:
+      try:
+        filestorage.CheckFileStoragePathAcceptance(okay_path[dt],
+                                                   dt,
+                                                   _filename=tmpfile)
+      except errors.FileStoragePathError:
+        self.fail("%r rejected for %r" % (okay_path[dt],
+                                          dt))
+
+      # No additional path component
+      try:
+        filestorage.CheckFileStoragePathAcceptance(bad_path[dt],
+                                                   dt,
+                                                   _filename=tmpfile)
+        self.fail("%r not rejected for %r" % (bad_path[dt],
+                                              dt))
+      except errors.FileStoragePathError:
+        pass
+
+      # Forbidden path
+      try:
+        filestorage.CheckFileStoragePathAcceptance(forbidden_path[dt],
+                                                   dt,
+                                                   _filename=tmpfile)
+        self.fail("%r not rejected for %r" % (forbidden_path[dt],
+                                              dt))
+      except errors.FileStoragePathError:
+        pass
 
 class TestFileDeviceHelper(testutils.GanetiTestCase):
   def test(self):
@@ -278,7 +326,6 @@ class TestFileDeviceHelper(testutils.GanetiTestCase):
 
     os.rmdir(subdirectory)
     os.rmdir(directory)
-
 
 if __name__ == "__main__":
   testutils.GanetiTestProgram()
