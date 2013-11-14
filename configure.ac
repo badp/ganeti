@@ -279,6 +279,16 @@ AC_MSG_NOTICE([Running ganeti-luxid as $user_luxid:$group_luxid])
 AC_MSG_NOTICE([Group for daemons is $group_daemons])
 AC_MSG_NOTICE([Group for clients is $group_admin])
 
+# --with-gluster-mountpoint=...
+AC_ARG_WITH([gluster-mountpoint],
+  [AS_HELP_STRING([--with-gluster-mountpoint=DIR],
+    [path where Ganeti will mount Gluster volumes on each node]
+    [ as necessary.]
+  )],
+  [GLUSTER_MOUNTPOINT="$withval"],
+  [GLUSTER_MOUNTPOINT="/var/run/ganeti/gluster"])
+AC_SUBST(GLUSTER_MOUNTPOINT, $GLUSTER_MOUNTPOINT)
+
 # --enable-drbd-barriers
 AC_ARG_ENABLE([drbd-barriers],
   [AS_HELP_STRING([--enable-drbd-barriers],

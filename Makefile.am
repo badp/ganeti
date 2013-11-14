@@ -1839,6 +1839,7 @@ src/AutoConf.hs: Makefile src/AutoConf.hs.in $(PRINT_PY_CONSTANTS) \
 	                    done)" \
 	    -DAF_INET4="$$(PYTHONPATH=. python $(PRINT_PY_CONSTANTS) AF_INET4)" \
 	    -DAF_INET6="$$(PYTHONPATH=. python $(PRINT_PY_CONSTANTS) AF_INET6)" \
+	    -DGLUSTER_MOUNTPOINT="\"$(GLUSTER_MOUNTPOINT)\"" \
 	$(abs_top_srcdir)/src/AutoConf.hs.in > $@
 
 lib/_vcsversion.py: Makefile vcs-version | stamp-directories
