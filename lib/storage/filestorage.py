@@ -36,7 +36,8 @@ from ganeti.storage import base
 
 
 class FileDeviceHelper(object):
-  def __init__(self, path, create_with_size=None, create_folder=False):
+  def __init__(self, path, disk_template,
+               create_with_size=None, create_folder=False):
     """Create a new file.
 
     @param create_with_size: do not attempt to open an existing file; instead
@@ -44,7 +45,8 @@ class FileDeviceHelper(object):
     @raise errors.FileStoragePathError: if the file path is disallowed by policy
     """
 
-    CheckFileStoragePathAcceptance(path)
+    CheckFileStoragePathAcceptance(path, disk_template)
+
     self.path = path
     if create_folder:
       folder = os.path.dirname(path)
@@ -127,6 +129,11 @@ class FileStorage(base.BlockDev):
 
   The unique_id for the file device is a (file_driver, file_path) tuple.
 
+  @todo: FileDeviceHelper has no way to know if it is servicing a DT_FILE or
+         DT_SHARED_FILE disk template. For now this doesn't matter (this
+         information is only used for storage path validation, and that
+         component also doesn't distinguish between the two), but this could be
+         an area for slight improvement in the future.
   """
   def __init__(self, unique_id, children, size, params, dyn_params,
                _file_helper_obj=None):
@@ -143,7 +150,8 @@ class FileStorage(base.BlockDev):
     self.dev_path = unique_id[1]
 
     if not _file_helper_obj:
-      self.file = FileDeviceHelper(self.dev_path)
+      self.file = FileDeviceHelper(self.dev_path,
+                                   constants.DT_FILE) # see todo above.
     else:
       self.file = _file_helper_obj
       if self.dev_path != self.file.path:
@@ -385,21 +393,45 @@ def _LoadAllowedFileStoragePaths(filename):
     return utils.FilterEmptyLinesAndComments(contents)
 
 
-def CheckFileStoragePathAcceptance(
-    path, _filename=pathutils.FILE_STORAGE_PATHS_FILE,
-    exact_match_ok=False):
+def CheckFileStoragePathAcceptance(path,
+                                   disk_templates=None,
+                                   _filename=pathutils.FILE_STORAGE_PATHS_FILE,
+                                   exact_match_ok=False):
   """Checks if a path is allowed for file storage.
 
   @type path: string
   @param path: Path to check
   @raise errors.FileStoragePathError: If the path is not allowed
+  @type disk_templates: a string or list of strings from DTS_FILEBASED
+  @param disk_templates: disk template(s) for which path must be valid. If
+                         multiple templates are given, then it is sufficient for
+                         path to be valid for any of the specified disk
+                         templates for the check to pass.
 
   """
-  allowed = _LoadAllowedFileStoragePaths(_filename)
+  if disk_templates is None:
+    disk_templates = constants.DTS_FILEBASED
+
+  if not isinstance(disk_templates, list):
+    disk_templates = [disk_templates]
+
+  bad_templates = filter(lambda t: t not in constants.DTS_FILEBASED,
+                         disk_templates)
+
+  if bad_templates:
+    raise errors.ProgrammerError("Invalid templates %s for path checking")
+
+  allowed = []
+  if (constants.DT_FILE in disk_templates or
+      constants.DT_SHARED_FILE in disk_templates):
+    allowed = _LoadAllowedFileStoragePaths(_filename)
+
+  if constants.DT_GLUSTER in disk_templates:
+    allowed.append(constants.GLUSTER_MOUNTPOINT)
+
   if not allowed:
     raise errors.FileStoragePathError("No paths are valid or path file '%s'"
-                                      " was not accessible." % _filename)
-
+                                      " is not accessible." % _filename)
   if _ComputeWrongFileStoragePaths([path]):
     raise errors.FileStoragePathError("Path '%s' uses a forbidden prefix" %
                                       path)
@@ -424,19 +456,28 @@ def _CheckFileStoragePathExistance(path):
 
 
 def CheckFileStoragePath(
-    path, _allowed_paths_file=pathutils.FILE_STORAGE_PATHS_FILE):
+      path, disk_templates=None,
+      _allowed_paths_file=pathutils.FILE_STORAGE_PATHS_FILE
+    ):
   """Checks whether the path exists and is acceptable to use.
 
   Can be used for any file-based storage, for example shared-file storage.
 
   @type path: string
   @param path: path to check
+  @type disk_templates: a string or list of strings from DTS_FILEBASED
+  @param disk_templates: disk template(s) for which path must be valid. If
+                        multiple templates are given, then it is sufficient for
+                        path to be valid for any of the specified disk templates
+                        for the check to pass.
   @rtype: string
   @returns: error message if the path is not ready to use
 
   """
   try:
-    CheckFileStoragePathAcceptance(path, _filename=_allowed_paths_file,
+    CheckFileStoragePathAcceptance(path,
+                                   disk_templates,
+                                   _filename=_allowed_paths_file,
                                    exact_match_ok=True)
   except errors.FileStoragePathError as e:
     return str(e)
