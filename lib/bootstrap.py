@@ -399,7 +399,8 @@ def _PrepareFileBasedStorage(
   if not acceptance_fn:
     acceptance_fn = \
         lambda path: filestorage.CheckFileStoragePathAcceptance(
-            path, exact_match_ok=True)
+            path, file_disk_template, exact_match_ok=True,
+            )
 
   cluster.CheckFileStoragePathVsEnabledDiskTemplates(
       logging.warning, file_storage_dir, enabled_disk_templates)

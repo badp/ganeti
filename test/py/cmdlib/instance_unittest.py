@@ -446,7 +446,7 @@ class TestLUInstanceCreate(CmdlibTestCase):
     self.cluster.file_storage_dir = None
     op = self.CopyOpCode(self.file_op)
     self.ExecOpCodeExpectOpPrereqError(
-      op, "Cluster file storage dir not defined")
+      op, "Cluster file storage dir for 'file' storage type not defined")
 
   def testFileInstanceAdditionalPath(self):
     op = self.CopyOpCode(self.file_op,
@@ -1106,11 +1106,19 @@ class TestGenerateDiskTemplate(CmdlibTestCase):
         disk_template, disk_info, 2, disk_template,
         file_storage_dir="/tmp", file_driver=constants.FD_BLKTAP)
 
-      self.assertEqual(map(operator.attrgetter("logical_id"), result), [
-        (constants.FD_BLKTAP, "/tmp/disk2"),
-        (constants.FD_BLKTAP, "/tmp/disk3"),
-        (constants.FD_BLKTAP, "/tmp/disk4"),
-        ])
+      if disk_template == constants.DT_GLUSTER:
+        # Here "inst21662.example.com" is actually the instance UUID, not its
+        # name, so while this result looks wrong, it is actually correct.
+        expected = [(constants.FD_BLKTAP,
+                     'ganeti/inst21662.example.com.%d' % x)
+                    for x in (2,3,4)]
+      else:
+        expected = [(constants.FD_BLKTAP,
+                     '/tmp/disk%d' % x)
+                    for x in (2,3,4)]
+
+      self.assertEqual(map(operator.attrgetter("logical_id"), result),
+                       expected)
 
   def testBlock(self):
     disk_info = [{

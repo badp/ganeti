@@ -1148,13 +1148,17 @@ def VerifyNode(what, cluster_name, all_hvparams, node_groups, groups_cfg):
 
   if what.get(constants.NV_FILE_STORAGE_PATH):
     pathresult = filestorage.CheckFileStoragePath(
-        what[constants.NV_FILE_STORAGE_PATH])
+        what[constants.NV_FILE_STORAGE_PATH],
+        constants.DT_FILE
+        )
     if pathresult:
       result[constants.NV_FILE_STORAGE_PATH] = pathresult
 
   if what.get(constants.NV_SHARED_FILE_STORAGE_PATH):
     pathresult = filestorage.CheckFileStoragePath(
-        what[constants.NV_SHARED_FILE_STORAGE_PATH])
+        what[constants.NV_SHARED_FILE_STORAGE_PATH],
+        constants.DT_SHARED_FILE
+        )
     if pathresult:
       result[constants.NV_SHARED_FILE_STORAGE_PATH] = pathresult
 
@@ -3309,7 +3313,7 @@ def _TransformFileStorageDir(fs_dir):
   @return: the normalized path if valid, None otherwise
 
   """
-  filestorage.CheckFileStoragePath(fs_dir)
+  filestorage.CheckFileStoragePath(fs_dir, constants.DT_FILE)
 
   return os.path.normpath(fs_dir)
 
