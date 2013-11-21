@@ -659,6 +659,9 @@ stExt = Types.storageTypeToRaw StorageExt
 stFile :: String
 stFile = Types.storageTypeToRaw StorageFile
 
+stSharedFile :: String
+stSharedFile = Types.storageTypeToRaw StorageSharedFile
+
 stLvmPv :: String
 stLvmPv = Types.storageTypeToRaw StorageLvmPv
 
@@ -818,12 +821,12 @@ mapDiskTemplateStorageType =
   [(DTBlock, StorageBlock),
    (DTDrbd8, StorageLvmVg),
    (DTExt, StorageExt),
-   (DTSharedFile, StorageFile),
+   (DTSharedFile, StorageSharedFile),
    (DTFile, StorageFile),
    (DTDiskless, StorageDiskless),
    (DTPlain, StorageLvmVg),
    (DTRbd, StorageRados),
-   (DTGluster, StorageFile)]
+   (DTGluster, StorageSharedFile)]
 
 -- | The set of network-mirrored disk templates
 dtsIntMirror :: FrozenSet String
