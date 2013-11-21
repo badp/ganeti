@@ -1107,16 +1107,31 @@ class LUNodeMigrate(LogicalUnit):
     return ResultWithJobs(jobs)
 
 
-def _GetStorageTypeArgs(cfg, storage_type):
+def _GetStorageTypeArgs(cfg, storage_type, node):
   """Returns the arguments for a storage type.
 
   """
   # Special case for file storage
-  if storage_type == constants.ST_FILE:
-    # storage.FileStorage wants a list of storage directories
-    return [[cfg.GetFileStorageDir(), cfg.GetSharedFileStorageDir()]]
 
-  return []
+  if storage_type == constants.ST_FILE:
+    return [[cfg.GetFileStorageDir()]]
+  elif storage_type == constants.ST_SHARED_FILE:
+    dts = cfg.GetClusterInfo().enabled_disk_templates
+    paths = []
+    if constants.DT_SHARED_FILE in dts:
+      paths.append(cfg.GetSharedFileStorageDir())
+    if constants.DT_GLUSTER in dts:
+      node_info = cfg.GetNodeInfo(node)
+      node_group = cfg.GetNodeGroup(node_info.group)
+      disk_params = cfg.GetGroupDiskParams(node_group)
+      volume = disk_params[constants.DT_GLUSTER].get(
+          constants.GLUSTER_VOLUME, constants.GLUSTER_VOLUME_DEFAULT
+      )
+      path = utils.io.PathJoin(constants.GLUSTER_MOUNTPOINT, volume)
+      paths.append(path)
+    return [paths]
+  else:
+    return []
 
 
 class LUNodeModifyStorage(NoHooksLU):
@@ -1160,7 +1175,8 @@ class LUNodeModifyStorage(NoHooksLU):
     """Computes the list of nodes and their attributes.
 
     """
-    st_args = _GetStorageTypeArgs(self.cfg, self.op.storage_type)
+    st_args = _GetStorageTypeArgs(self.cfg, self.op.storage_type,
+                                  self.op.node_uuid)
     result = self.rpc.call_storage_modify(self.op.node_uuid,
                                           self.op.storage_type, st_args,
                                           self.op.name, self.op.changes)
@@ -1335,10 +1351,18 @@ class LUNodeQueryStorage(NoHooksLU):
     field_idx = dict([(name, idx) for (idx, name) in enumerate(fields)])
     name_idx = field_idx[constants.SF_NAME]
 
-    st_args = _GetStorageTypeArgs(self.cfg, self.storage_type)
-    data = self.rpc.call_storage_list(self.node_uuids,
-                                      self.storage_type, st_args,
-                                      self.op.name, fields)
+    nodes = self.node_uuids.copy()
+    data = {}
+
+    # The list of storage paths varies by node group (ipolicy, gluster...)
+    while nodes:
+      one_node = nodes.pop()
+      nodes_in_group = self.cfg.GetNodeGroupMembersByNodes([one_node])
+      st_args = _GetStorageTypeArgs(self.cfg, self.storage_type,
+                                    one_node)
+      data.update(self.rpc.call_storage_list(nodes_in_group, self.storage_type,
+                                            st_args, self.op.name, fields))
+      nodes = nodes.difference(nodes_in_group)
 
     result = []
 
@@ -1532,7 +1556,7 @@ class LURepairNodeStorage(NoHooksLU):
     feedback_fn("Repairing storage unit '%s' on %s ..." %
                 (self.op.name, self.op.node_name))
 
-    st_args = _GetStorageTypeArgs(self.cfg, self.op.storage_type)
+    st_args = _GetStorageTypeArgs(self.cfg, self.op.storage_type, None)
     result = self.rpc.call_storage_execute(self.op.node_uuid,
                                            self.op.storage_type, st_args,
                                            self.op.name,
