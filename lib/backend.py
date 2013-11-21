@@ -770,6 +770,23 @@ def _GetFileStorageSpaceInfo(path, params):
   return filestorage.GetFileStorageSpaceInfo(path)
 
 
+def _DeclineStorageInfoRequest(storage_type, name, *_1, **_2):
+  """Intentionally withhold information about disk capacity and availability.
+
+  For disk templates that have a common disk storage between nodes, it is
+  incorrect to show per-node disk values: they are not per-node attributes.
+
+  @param storage_type: the storage type we are declining to answer for.
+  @param name: this parameter gets passed by L{_ApplyStorageInfoFunction}
+
+  """
+
+  return {"type": storage_type,
+          "name": name,
+#          "storage_free": None,
+#          "storage_size": None,
+         }
+
 # FIXME: implement storage reporting for all missing storage types.
 _STORAGE_TYPE_INFO_FN = {
   constants.ST_BLOCK: None,
@@ -778,7 +795,10 @@ _STORAGE_TYPE_INFO_FN = {
   constants.ST_FILE: _GetFileStorageSpaceInfo,
   constants.ST_LVM_PV: _GetLvmPvSpaceInfo,
   constants.ST_LVM_VG: _GetLvmVgSpaceInfo,
-  constants.ST_RADOS: None,
+  constants.ST_SHARED_FILE:
+    compat.partial(_DeclineStorageInfoRequest, constants.ST_SHARED_FILE),
+  constants.ST_RADOS:
+    compat.partial(_DeclineStorageInfoRequest, constants.ST_RADOS),
 }
 
 
@@ -801,6 +821,7 @@ def _ApplyStorageInfoFunction(storage_type, storage_key, *args):
   @raises NotImplementedError: for storage types who don't support space
     reporting yet
   """
+
   fn = _STORAGE_TYPE_INFO_FN[storage_type]
   if fn is not None:
     return fn(storage_key, *args)
