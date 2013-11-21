@@ -654,7 +654,8 @@ def CheckFileBasedStoragePathVsEnabledDiskTemplates(
 
   """
   assert (file_disk_template in
-          utils.storage.GetDiskTemplatesOfStorageType(constants.ST_FILE))
+          utils.storage.GetDiskTemplatesOfStorageType(constants.ST_FILE,
+                                                      constants.ST_SHARED_FILE))
   file_storage_enabled = file_disk_template in enabled_disk_templates
   if file_storage_dir is not None:
     if file_storage_dir == "":
@@ -2572,7 +2573,9 @@ class LUClusterVerifyGroup(LogicalUnit, _VerifyErrors):
 
     """
     assert (file_disk_template in
-            utils.storage.GetDiskTemplatesOfStorageType(constants.ST_FILE))
+            utils.storage.GetDiskTemplatesOfStorageType(constants.ST_FILE,
+                                                        constants.ST_SHARED_FILE
+                                                       ))
     cluster = self.cfg.GetClusterInfo()
     if cluster.IsDiskTemplateEnabled(file_disk_template):
       self._ErrorIf(
