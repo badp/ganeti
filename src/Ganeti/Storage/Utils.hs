@@ -28,29 +28,34 @@ module Ganeti.Storage.Utils
   , nodesWithValidConfig
   ) where
 
+import Control.Monad
+import qualified Data.Map as M
+import Data.Maybe
+
+import Text.JSON
+
 import Ganeti.Config
+import Ganeti.Constants
+import Ganeti.JSON
 import Ganeti.Objects
 import Ganeti.Types
-import qualified Ganeti.Types as T
-
-import Control.Monad
-import Data.Maybe
-import qualified Data.Map as M
 
 -- | Get the cluster's default storage unit for a given disk template
 getDefaultStorageKey :: ConfigData -> DiskTemplate -> Maybe StorageKey
-getDefaultStorageKey cfg T.DTDrbd8 = clusterVolumeGroupName $ configCluster cfg
-getDefaultStorageKey cfg T.DTPlain = clusterVolumeGroupName $ configCluster cfg
-getDefaultStorageKey cfg T.DTFile =
+getDefaultStorageKey cfg DTDrbd8 = clusterVolumeGroupName $ configCluster cfg
+getDefaultStorageKey cfg DTPlain = clusterVolumeGroupName $ configCluster cfg
+getDefaultStorageKey cfg DTFile =
     Just (clusterFileStorageDir $ configCluster cfg)
-getDefaultStorageKey cfg T.DTSharedFile =
+getDefaultStorageKey cfg DTSharedFile =
     Just (clusterSharedFileStorageDir $ configCluster cfg)
+getDefaultStorageKey cfg DTGluster =
+    Just (glusterGetDefaultMountpoint cfg)
 getDefaultStorageKey _ _ = Nothing
 
 -- | Get the cluster's default spindle storage unit
 getDefaultSpindleSU :: ConfigData -> (StorageType, Maybe StorageKey)
 getDefaultSpindleSU cfg =
-    (T.StorageLvmPv, clusterVolumeGroupName $ configCluster cfg)
+    (StorageLvmPv, clusterVolumeGroupName $ configCluster cfg)
 
 -- | Get the cluster's storage units from the configuration
 getClusterStorageUnitRaws :: ConfigData -> [StorageUnitRaw]
@@ -90,3 +95,16 @@ getStorageUnitsOfNode cfg n =
 getStorageUnitsOfNodes :: ConfigData -> [Node] -> M.Map String [StorageUnit]
 getStorageUnitsOfNodes cfg ns =
   M.fromList (map (\n -> (nodeUuid n, getStorageUnitsOfNode cfg n)) ns)
+
+-- cfg.diskparams[constants.DT_GLUSTER][constants.GLUSTER_VOLUME]
+glusterGetDefaultMountpoint :: ConfigData -> StorageKey
+glusterGetDefaultMountpoint cfg = glusterMountpoint ++ "/" ++ volume
+  where volume = fromMaybe glusterVolumeDefault $
+          do let json = clusterDiskparams $ configCluster cfg
+             glusterParams <- M.lookup dtGluster $ fromContainer json
+             volumeJSON <- M.lookup glusterVolume $ fromContainer glusterParams
+             resultToMaybe $ readJSON volumeJSON
+
+resultToMaybe :: Result a -> Maybe a
+resultToMaybe (Ok x)    = Just x
+resultToMaybe (Error _) = Nothing
