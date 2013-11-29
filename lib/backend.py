@@ -755,6 +755,13 @@ def GetNodeInfo(storage_units, hv_specs):
   return (bootid, storage_info, hv_info)
 
 
+def _DeclineToProvideSharedFileStorageInfo(path, _):
+  """Returns no storage data for the Shared File disk template.
+
+  """
+  return {"type": constants.ST_SHARED_FILE,
+          "name": path}
+
 def _GetFileStorageSpaceInfo(path, params):
   """Wrapper around filestorage.GetSpaceInfo.
 
@@ -778,6 +785,7 @@ _STORAGE_TYPE_INFO_FN = {
   constants.ST_FILE: _GetFileStorageSpaceInfo,
   constants.ST_LVM_PV: _GetLvmPvSpaceInfo,
   constants.ST_LVM_VG: _GetLvmVgSpaceInfo,
+  constants.ST_SHARED_FILE: _DeclineToProvideSharedFileStorageInfo,
   constants.ST_RADOS: None,
 }
 
