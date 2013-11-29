@@ -1112,11 +1112,19 @@ def _GetStorageTypeArgs(cfg, storage_type):
 
   """
   # Special case for file storage
-  if storage_type == constants.ST_FILE:
-    # storage.FileStorage wants a list of storage directories
-    return [[cfg.GetFileStorageDir(), cfg.GetSharedFileStorageDir()]]
 
-  return []
+  if storage_type == constants.ST_FILE:
+    return [[cfg.GetFileStorageDir()]]
+  elif storage_type == constants.ST_SHARED_FILE:
+    dts = cfg.GetClusterInfo().enabled_disk_templates
+    paths = []
+    if constants.DT_SHARED_FILE in dts:
+      paths.append(cfg.GetSharedFileStorageDir())
+    if constants.DT_GLUSTER in dts:
+      paths.append(cfg.GetGlusterStorageDir())
+    return [paths]
+  else:
+    return []
 
 
 class LUNodeModifyStorage(NoHooksLU):
