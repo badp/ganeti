@@ -47,7 +47,8 @@ class TestGlusterVolume(testutils.GanetiTestCase):
     return gluster.GlusterVolume(address[ipv] if not addr else addr,
                                  port,
                                  str(vol_name),
-                                 _run_cmd=run_cmd
+                                 _run_cmd=run_cmd,
+                                 _mount_point="/invalid"
                                 )
 
     TestGlusterVolume.last_vol_name = vol_name

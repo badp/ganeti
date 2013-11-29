@@ -136,6 +136,8 @@ handleCall _ cdata QueryClusterInfo =
             , ("file_storage_dir", showJSON $ clusterFileStorageDir cluster)
             , ("shared_file_storage_dir",
                showJSON $ clusterSharedFileStorageDir cluster)
+            , ("gluster_storage_dir",
+               showJSON $ clusterGlusterStorageDir cluster)
             , ("maintain_node_health",
                showJSON $ clusterMaintainNodeHealth cluster)
             , ("ctime", showJSON $ clusterCtime cluster)

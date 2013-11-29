@@ -28,7 +28,9 @@ import unittest
 
 from ganeti import errors
 from ganeti.storage import filestorage
+from ganeti.utils import io
 from ganeti import utils
+from ganeti import constants
 
 import testutils
 
@@ -217,6 +219,7 @@ class TestCheckFileStoragePathExistance(testutils.GanetiTestCase):
     self.assertRaises(errors.FileStoragePathError,
                       filestorage.CheckFileStoragePathAcceptance,
                       "/usr/lib64/xyz", _filename=tmpfile)
+
 
 class TestFileDeviceHelper(testutils.GanetiTestCase):
   def test(self):

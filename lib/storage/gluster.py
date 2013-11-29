@@ -53,15 +53,18 @@ class GlusterVolume(object):
   equal volumes are not made multiple times.
   """
 
-  def __init__(self, server_addr, port, volume, _run_cmd=utils.RunCmd):
+  def __init__(self, server_addr, port, volume, _run_cmd=utils.RunCmd,
+               _mount_point=None):
     self.server_addr = server_addr
     server_ip = netutils.Hostname.GetIP(self.server_addr)
     self._server_ip = server_ip
     port = netutils.ValidatePortNumber(port)
     self._port = port
     self._volume = volume
-    self.mount_point = io.PathJoin(constants.GLUSTER_MOUNTPOINT,
-                                   self._volume)
+    if _mount_point: # tests
+      self.mount_point = _mount_point
+    else:
+      self.mount_point = ssconf.SimpleStore().GetGlusterStorageDir()
 
     self._run_cmd = _run_cmd
 

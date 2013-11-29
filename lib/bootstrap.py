@@ -444,6 +444,20 @@ def _PrepareSharedFileStorage(
       init_fn=init_fn, acceptance_fn=acceptance_fn)
 
 
+def _PrepareGlusterStorage(
+    enabled_disk_templates, file_storage_dir, init_fn=_InitFileStorageDir,
+    acceptance_fn=None):
+  """Checks if gluster storage is enabled and inits the dir.
+
+  @see: C{_PrepareFileBasedStorage}
+
+  """
+  return _PrepareFileBasedStorage(
+      enabled_disk_templates, file_storage_dir,
+      pathutils.DEFAULT_GLUSTER_STORAGE_DIR, constants.DT_GLUSTER,
+      init_fn=init_fn, acceptance_fn=acceptance_fn)
+
+
 def _InitCheckEnabledDiskTemplates(enabled_disk_templates):
   """Checks the sanity of the enabled disk templates.
 

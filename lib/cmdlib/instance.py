@@ -849,22 +849,27 @@ class LUInstanceCreate(LogicalUnit):
       # build the full file storage dir path
       joinargs = []
 
-      if self.op.disk_template in (constants.DT_SHARED_FILE,
-                                   constants.DT_GLUSTER):
-        get_fsd_fn = self.cfg.GetSharedFileStorageDir
-      else:
-        get_fsd_fn = self.cfg.GetFileStorageDir
+      cfg_storage = {
+        constants.DT_FILE: self.cfg.GetFileStorageDir,
+        constants.DT_SHARED_FILE: self.cfg.GetSharedFileStorageDir,
+        constants.DT_GLUSTER: self.cfg.GetGlusterStorageDir,
+      }.get(self.op.disk_template, lambda: None)()
 
-      cfg_storagedir = get_fsd_fn()
-      if not cfg_storagedir:
-        raise errors.OpPrereqError("Cluster file storage dir not defined",
-                                   errors.ECODE_STATE)
-      joinargs.append(cfg_storagedir)
+      if not cfg_storage:
+        raise errors.OpPrereqError(
+          "Cluster file storage dir for {tpl} storage type not defined".format(
+            tpl=repr(self.op.disk_template)
+          ),
+          errors.ECODE_STATE
+      )
+
+      joinargs.append(cfg_storage)
 
       if self.op.file_storage_dir is not None:
         joinargs.append(self.op.file_storage_dir)
 
-      joinargs.append(self.op.instance_name)
+      if self.op.disk_template != constants.DT_GLUSTER:
+        joinargs.append(self.op.instance_name)
 
       # pylint: disable=W0142
       self.instance_file_storage_dir = utils.PathJoin(*joinargs)
@@ -1547,7 +1552,8 @@ class LUInstanceRename(LogicalUnit):
     old_name = self.instance.name
 
     rename_file_storage = False
-    if (self.instance.disk_template in constants.DTS_FILEBASED and
+    if (self.instance.disk_template in (constants.DT_FILE,
+                                        constants.DT_SHARED_FILE) and
         self.op.new_name != self.instance.name):
       old_file_storage_dir = os.path.dirname(
                                self.instance.disks[0].logical_id[1])
