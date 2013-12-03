@@ -31,7 +31,6 @@ module Ganeti.Storage.Utils
 import Ganeti.Config
 import Ganeti.Objects
 import Ganeti.Types
-import Ganeti.Constants
 import qualified Ganeti.Types as T
 
 import Control.Monad
@@ -47,8 +46,8 @@ getDefaultStorageKey cfg T.DTFile =
     Just (clusterFileStorageDir $ configCluster cfg)
 getDefaultStorageKey cfg T.DTSharedFile =
     Just (clusterSharedFileStorageDir $ configCluster cfg)
-getDefaultStorageKey _ T.DTGluster =
-    Just glusterMountpoint
+getDefaultStorageKey cfg T.DTGluster =
+    Just (clusterGlusterStorageDir $ configCluster cfg)
 getDefaultStorageKey _ _ = Nothing
 
 -- | Get the cluster's default spindle storage unit
