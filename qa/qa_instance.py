@@ -139,9 +139,15 @@ def _DestroyInstanceDisks(instance):
     # Note that this works for both file and sharedfile, and this is intended.
     storage_dir = qa_config.get("file-storage-dir",
                                 pathutils.DEFAULT_FILE_STORAGE_DIR)
-    idir = os.path.join(storage_dir, instance.name)
-    for node in info["nodes"]:
-      AssertCommand(["rm", "-rf", idir], node=node)
+    if info["disk_template"] != constants.DT_GLUSTER:
+      idir = os.path.join(storage_dir, instance.name)
+      for node in info["nodes"]:
+        AssertCommand(["rm", "-rf", idir], node=node)
+    else:
+      idir = os.path.join(storage_dir, "ganeti")
+      files = [f for f in os.listdir(idir) if f.startswith(instance.uuid)]
+      for item in files:
+        AssertCommand(["rm", "-rf", item], info["nodes"][0])
   elif info["storage-type"] == constants.ST_DISKLESS:
     pass
 
