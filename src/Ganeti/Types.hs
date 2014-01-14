@@ -161,8 +161,11 @@ module Ganeti.Types
   , hotplugActionToRaw
   , ParamVisibility(..)
   , paramVisibilityToRaw
+  , Private(..)
+  , showPrivateJSObject
   ) where
 
+import Control.Applicative
 import Control.Monad (liftM)
 import qualified Text.JSON as JSON
 import Text.JSON (JSON, readJSON, showJSON)
@@ -903,3 +906,47 @@ $(THH.makeJSONInstance ''ParamVisibility)
 
 instance THH.PyValue ParamVisibility where
   showValue = show . paramVisibilityToRaw
+
+-- | A container for values that should be happy to be manipulated yet
+-- | refuses to be shown unless explicitly requested.
+
+newtype Private value = Private { getPrivate :: value }
+  deriving Eq
+
+instance (Show a, JSON.JSON a) => JSON.JSON (Private a) where
+  readJSON json = Private <$> JSON.readJSON json
+  showJSON (Private a) = JSON.showJSON a
+
+-- It would be better not to implement this at all.
+-- Alas, Show OpCode requires Show Private.
+instance (Show a) => Show (Private a) where
+  show _ = "<redacted>"
+
+instance (THH.PyValue a) => THH.PyValue (Private a) where
+  showValue (Private a) = "Private(" ++ THH.showValue a ++ ")"
+
+instance Functor Private where
+  fmap f (Private x) = Private $ f x
+
+instance Monad Private where
+  (Private x) >>= f = f x
+  return = Private
+
+--instance (JSON.JSON a) => PrivateJSON (Private a) where
+--  unprivateAndShowJSON l | l >= Private_ = JSON.showJSON . getPrivate
+--  unprivateAndShowJSON _                 = JSON.showJSON
+
+--instance (JSON.JSON a) => JSON.JSON [(String, Private JSON.JSValue)] where
+--  showJSON value = JSON.toJSObject $ map f value
+--    where f (k, v) = (k, Private $ JSON.showJSON v)
+
+showPrivateJSObject :: (JSON.JSON a) =>
+                       [(String, a)] -> JSON.JSObject (Private JSON.JSValue)
+showPrivateJSObject value = JSON.toJSObject $ map f value
+  where f (k, v) = (k, Private $ JSON.showJSON v)
+
+--readPrivateJSObject :: String ->
+--                       JSON.Result (JSON.JSObject (Private JSON.JSValue))
+--readPrivateJSObject json = do
+--  jsobj <- JSON.decode json
+--  return fmap Private $ readContainer jsobj

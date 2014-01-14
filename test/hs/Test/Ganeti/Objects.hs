@@ -219,6 +219,9 @@ instance Arbitrary ClusterNicParams where
 instance Arbitrary OsParams where
   arbitrary = (GenericContainer . Map.fromList) <$> arbitrary
 
+instance (Arbitrary a) => Arbitrary (Private a) where
+  arbitrary = Private <$> arbitrary
+
 instance Arbitrary ClusterOsParams where
   arbitrary = (GenericContainer . Map.fromList) <$> arbitrary
 
