@@ -4746,3 +4746,21 @@ glusterPort = "port"
 -- | Default value of the Gluster port setting
 glusterPortDefault :: Int
 glusterPortDefault = 24007
+
+-- * Arguments visibility options (OS parameters only)
+
+-- | May log and save
+visPublic :: ParamVisibility
+visPublic = VisPublic
+
+-- | May not log, may save
+visNoLog :: ParamVisibility
+visNoLog = VisNoLog
+
+-- | May not log or save
+visNoLogNoSave :: ParamVisibility
+visNoLogNoSave = VisNoLogNoSave
+
+-- | All visibility levels
+visValidLevels :: FrozenSet ParamVisibility
+visValidLevels = ConstantUtils.mkSet [minBound..]

@@ -159,6 +159,8 @@ module Ganeti.Types
   , hotplugTargetToRaw
   , HotplugAction(..)
   , hotplugActionToRaw
+  , ParamVisibility(..)
+  , paramVisibilityToRaw
   ) where
 
 import Control.Monad (liftM)
@@ -889,3 +891,15 @@ $(THH.declareLADT ''String "HotplugTarget"
   , ("HTNic",  "hotnic")
   ])
 $(THH.makeJSONInstance ''HotplugTarget)
+
+-- | Parameter visibility levels.
+
+$(THH.declareLADT ''String "ParamVisibility"
+  [ ("VisPublic",      "public")
+  , ("VisNoLog",       "private")
+  , ("VisNoLogNoSave", "secret")
+  ])
+$(THH.makeJSONInstance ''ParamVisibility)
+
+instance THH.PyValue ParamVisibility where
+  showValue = show . paramVisibilityToRaw
