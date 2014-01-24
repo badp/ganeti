@@ -647,6 +647,7 @@ $(genOpCode "OpCode"
        pRemoteNodeUuid
      , pOsNameChange
      , pInstOsParams
+     , pInstOsParamsPrivate
      , pWaitForSync
      , withDoc "Whether to mark the instance as offline" pOffline
      , pIpConflictsCheck
