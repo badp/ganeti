@@ -1175,10 +1175,32 @@ class LUClusterSetParams(LogicalUnit):
         if not self.new_osp[os_name]:
           # we removed all parameters
           del self.new_osp[os_name]
-        else:
-          # check the parameter validity (remote check)
-          CheckOSParams(self, False, [self.cfg.GetMasterNode()],
-                        os_name, self.new_osp[os_name])
+
+    # private os params
+    self.new_osp_private = objects.FillDict(cluster.osparams_private_cluster,
+                                            {})
+    if self.op.osparams_private_cluster:
+      for os_name, osp in self.op.osparams_private_cluster.items():
+        if os_name not in self.new_osp_private:
+          self.new_osp_private[os_name] = {}
+
+        self.new_osp_private[os_name] = GetUpdatedParams(
+          self.new_osp_private[os_name], osp, use_none=True
+        )
+
+        if not self.new_osp_private[os_name]:
+          # we removed all parameters
+          del self.new_osp_private[os_name]
+
+    # Remove os validity check
+    changed_oses = (set(self.new_osp.keys()) | set(self.new_osp_private.keys()))
+    for os_name in changed_oses:
+      os_params = cluster.SimpleFillOS(os_name,
+                                       self.new_osp.get(os_name, {}),
+                                       self.new_osp_private.get(os_name, {}))
+      # check the parameter validity (remote check)
+      CheckOSParams(self, False, [self.cfg.GetMasterNode()],
+                    os_name, os_params)
 
     # changes to the hypervisor list
     if self.op.enabled_hypervisors is not None:
@@ -1318,6 +1340,8 @@ class LUClusterSetParams(LogicalUnit):
       self.cluster.ipolicy = self.new_ipolicy
     if self.op.osparams:
       self.cluster.osparams = self.new_osp
+    if self.op.osparams_private_cluster:
+      self.cluster.osparams_private_cluster = self.new_osp_private
     if self.op.ndparams:
       self.cluster.ndparams = self.new_ndparams
     if self.op.diskparams:

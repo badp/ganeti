@@ -117,6 +117,7 @@ module Ganeti.OpParams
   , pResetDefaults
   , pOsHvp
   , pClusterOsParams
+  , pClusterOsParamsPrivate
   , pInstOsParams
   , pCandidatePoolSize
   , pMaxRunningJobs
@@ -618,6 +619,19 @@ pClusterOsParams =
   renameField "ClusterOsParams" .
   optionalField $
   simpleField "osparams" [t| GenericContainer String (JSObject JSValue) |]
+
+pClusterOsParamsPrivate :: Field
+pClusterOsParamsPrivate =
+  field { fieldDoc = "meh"
+          -- fieldShow = Just [| \(_,y) -> showPrivateJSObject y |]
+        }
+  where field =
+          withDoc "Cluster-wide private OS parameter defaults" .
+          renameField "ClusterOsParamsPrivate" .
+          optionalField $
+          -- This field needs an unique name to aid Python deserialization
+          simpleField "osparams_private_cluster"
+            [t| GenericContainer String (JSObject (Private JSValue)) |]
 
 pDiskParams :: Field
 pDiskParams =
