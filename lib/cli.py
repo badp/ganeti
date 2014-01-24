@@ -2764,6 +2764,7 @@ def GenericInstanceCreate(mode, opts, args):
     no_install = None
     identify_defaults = opts.identify_defaults
     compress = opts.compress
+    opts.osparams_secret = None
   else:
     raise errors.ProgrammerError("Invalid creation mode %s" % mode)
 
@@ -2783,6 +2784,8 @@ def GenericInstanceCreate(mode, opts, args):
                                 hvparams=hvparams,
                                 beparams=opts.beparams,
                                 osparams=opts.osparams,
+                                osparams_private=opts.osparams_private,
+                                osparams_secret=opts.osparams_secret,
                                 mode=mode,
                                 start=start,
                                 os_type=os_type,

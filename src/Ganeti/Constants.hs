@@ -1089,6 +1089,9 @@ inisectIns = "instance"
 inisectOsp :: String
 inisectOsp = "os"
 
+inisectOspPrivate :: String
+inisectOspPrivate = "os_private"
+
 -- * Dynamic device modification
 
 ddmAdd :: String
