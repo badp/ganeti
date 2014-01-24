@@ -473,6 +473,8 @@ $(genOpCode "OpCode"
      , pForceVariant
      , pInstOs
      , pTempOsParams
+     , pTempOsParamsPrivate
+     , pTempOsParamsSecret
      ],
      "instance_name")
   , ("OpInstanceRemove",

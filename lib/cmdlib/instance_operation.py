@@ -302,8 +302,11 @@ class LUInstanceReinstall(LogicalUnit):
 
     node_uuids = list(instance.all_nodes)
 
-    if self.op.osparams:
-      i_osdict = GetUpdatedParams(instance.osparams, self.op.osparams)
+    if self.op.osparams or self.op.osparams_private or self.op.osparams_secret:
+      i_osdict = GetUpdatedParams(instance.osparams,
+                                  self.op.osparams,
+                                  self.op.osparams_private,
+                                  self.op.osparams_secret)
       CheckOSParams(self, True, node_uuids, instance_os, i_osdict)
       self.os_inst = i_osdict # the new dict (without defaults)
     else:
