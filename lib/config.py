@@ -2506,6 +2506,8 @@ class ConfigWriter(object):
     finally:
       os.close(fd)
 
+    del txt # No need to keep it around.
+
     self.write_count += 1
 
     # and redistribute the config file to master candidates

@@ -123,6 +123,8 @@ instance Arbitrary Instance where
       <*> arbitrary
       -- osparams
       <*> pure (GenericContainer Map.empty)
+      -- osparams_private
+      <*> pure (GenericContainer Map.empty)
       -- admin_state
       <*> arbitrary
       -- nics
@@ -217,6 +219,9 @@ instance Arbitrary ClusterNicParams where
   arbitrary = (GenericContainer . Map.singleton C.ppDefault) <$> arbitrary
 
 instance Arbitrary OsParams where
+  arbitrary = (GenericContainer . Map.fromList) <$> arbitrary
+
+instance Arbitrary Objects.ClusterOsParamsPrivate where
   arbitrary = (GenericContainer . Map.fromList) <$> arbitrary
 
 instance (Arbitrary a) => Arbitrary (Private a) where
@@ -555,7 +560,7 @@ caseIncludeLogicalIdDrbd :: HUnit.Assertion
 caseIncludeLogicalIdDrbd =
   let vg_name = "xenvg" :: String
       lv_name = "1234sdf-qwef-2134-asff-asd2-23145d.data" :: String
-      d = 
+      d =
         Disk
           (LIDDrbd8 "node1.example.com" "node2.example.com" 2000 1 5 "secret")
           [ Disk (LIDPlain "onevg" "onelv") [] "disk1" 1000 DiskRdWr Nothing
