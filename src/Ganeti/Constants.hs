@@ -4764,3 +4764,10 @@ visNoLogNoSave = VisNoLogNoSave
 -- | All visibility levels
 visValidLevels :: FrozenSet ParamVisibility
 visValidLevels = ConstantUtils.mkSet [minBound..]
+
+-- | Parameters that should be protected
+privateParametersBlacklist :: [String]
+privateParametersBlacklist = [ "osparams_private"
+                             , "osparams_secret"
+                             , "osparams_private_cluster" ]
+

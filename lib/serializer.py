@@ -40,19 +40,22 @@ import simplejson
 
 from ganeti import errors
 from ganeti import utils
-
+from ganeti import constants
 
 _RE_EOLSP = re.compile("[ \t]+$", re.MULTILINE)
 
 
-def DumpJson(data):
+def DumpJson(data, private_decoder=None):
   """Serialize a given object.
 
   @param data: the data to serialize
   @return: the string representation of data
 
   """
-  encoded = simplejson.dumps(data)
+  if private_decoder is None:
+    # Do not leak private fields by default.
+    private_decoder = EncodeWithoutPrivate
+  encoded = simplejson.dumps(data, default=private_decoder)
 
   txt = _RE_EOLSP.sub("", encoded)
   if not txt.endswith("\n"):
@@ -69,10 +72,46 @@ def LoadJson(txt):
   @return: the original data
 
   """
-  return simplejson.loads(txt)
+  values = simplejson.loads(txt)
+
+  # Hunt and seek for Private fields and wrap them.
+  WrapPrivateValues(values)
+
+  return values
 
 
-def DumpSignedJson(data, key, salt=None, key_selector=None):
+def WrapPrivateValues(json):
+  todo = [json]
+
+  while todo:
+    data = todo.pop()
+
+    if isinstance(data, list): # Array
+      for item in data:
+        todo.append(item)
+    elif isinstance(data, dict): # Object
+
+      # This is kind of a kludge, but the only place where we know what should
+      # be protected is in opcodes.py, and not in a way that is helpful to us,
+      # especially in such a high traffic method; on the other hand, the
+      # Haskell `py_compat_fields` test should complain whenever this check
+      # does not protect fields properly.
+      for field in data:
+        value = data[field]
+        if field in constants.PRIVATE_PARAMETERS_BLACKLIST:
+          if not field.endswith("_cluster"):
+            data[field] = PrivateDict(value)
+          else:
+            for os in data[field]:
+              value[os] = PrivateDict(value[os])
+        else:
+          todo.append(value)
+    else: # Values
+      pass
+
+
+def DumpSignedJson(data, key, salt=None, key_selector=None,
+                   private_decoder=None):
   """Serialize a given object and authenticate it.
 
   @param data: the data to serialize
@@ -82,7 +121,7 @@ def DumpSignedJson(data, key, salt=None, key_selector=None):
   @return: the string representation of data signed by the hmac key
 
   """
-  txt = DumpJson(data)
+  txt = DumpJson(data, private_decoder=private_decoder)
   if salt is None:
     salt = ""
   signed_dict = {
@@ -113,6 +152,9 @@ def LoadSignedJson(txt, key):
 
   """
   signed_dict = LoadJson(txt)
+
+  WrapPrivateValues(signed_dict)
+
   if not isinstance(signed_dict, dict):
     raise errors.SignatureError("Invalid external message")
   try:
@@ -226,18 +268,19 @@ class Private(object):
 class PrivateDict(dict):
   """A dictionary that turns its values to private fields.
 
-  >>> PrivateDict()
-  {}
-  >>> supersekkrit = PrivateDict({"password": "foobar"})
-  >>> supersekkrit["password"]
-  Private(?, descr='password')
-  >>> supersekkrit["password"].Get()
-  'foobar'
-  >>> supersekkrit["user"] = "eggspam"
-  >>> supersekkrit.GetPrivate("user")
-  'eggspam'
-  >>> supersekkrit.Unprivate()
-  {'password': 'foobar', 'user': 'eggspam'}
+    >>> PrivateDict()
+    {}
+    >>> supersekkrit = PrivateDict({"password": "foobar"})
+    >>> supersekkrit["password"]
+    Private(?, descr='password')
+    >>> supersekkrit["password"].Get()
+    'foobar'
+    >>> supersekkrit["user"] = "eggspam"
+    >>> supersekkrit.GetPrivate("user")
+    'eggspam'
+    >>> supersekkrit.Unprivate()
+    {'password': 'foobar', 'user': 'eggspam'}
+
   """
 
   def __init__(self, data=None):
@@ -279,6 +322,7 @@ class PrivateDict(dict):
       'bar'
       >>> PrivateDict({"foo": "bar"}).GetPrivate("baz", "spam")
       'spam'
+
     """ # epydoc does not check doctests, btw.
     if len(args) == 1:
       key, = args
@@ -299,8 +343,21 @@ class PrivateDict(dict):
     {'foo': 'bar'}
 
     @rtype: dict
+
     """
     returndict = {}
     for key in self:
       returndict[key] = self[key].Get()
     return returndict
+
+
+def EncodeWithoutPrivate(obj):
+  if isinstance(obj, Private):
+    return None
+  raise TypeError(repr(obj) + " is not JSON serializable")
+
+
+def EncodeWithPrivateFields(obj):
+  if isinstance(obj, Private):
+    return obj.Get()
+  raise TypeError(repr(obj) + " is not JSON serializable")
