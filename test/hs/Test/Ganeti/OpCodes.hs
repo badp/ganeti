@@ -522,7 +522,7 @@ case_py_compat_types = do
   HUnit.assertEqual "Mismatch in number of returned opcodes"
     (length decoded) (length with_sum)
   mapM_ (uncurry (HUnit.assertEqual "Different result after encoding/decoding")
-        ) $ zip decoded with_sum
+        ) $ zip with_sum decoded
 
 -- | Custom HUnit test case that forks a Python process and checks
 -- correspondence between Haskell OpCodes fields and their Python
