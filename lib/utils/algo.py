@@ -95,6 +95,34 @@ def FindDuplicates(seq):
   return list(dup)
 
 
+#pylint: disable=W0142
+def GetRepeatedKeys(*dicts):
+  """Return the set of keys defined multiple times in the given dicts.
+
+  >>> GetRepeatedKeys({"foo": 1, "bar": 2},
+  ...                 {"foo": 5, "baz": 7}
+  ...                )
+  set("foo")
+
+  @type dicts: dict
+  @param dicts: The dictionaries to check for duplicate keys.
+  @rtype: set
+  @return: Keys used more than once across all dicts
+
+  """
+
+  if len(dicts) < 2:
+    return set()
+
+  # It is trivial to generalize this function to more than just dicts
+  # by changing the .keys() call to another "for key in dictionary"
+  keys = [set(dictionary.keys()) for dictionary in dicts]
+  return set.union(*[x & y
+                     for x in keys
+                     for y in keys
+                     if x is not y])
+
+
 def _NiceSortTryInt(val):
   """Attempts to convert a string to an integer.
 
