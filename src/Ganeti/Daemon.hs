@@ -49,6 +49,7 @@ import Control.Concurrent
 import Control.Exception
 import Control.Monad
 import Data.Maybe (fromMaybe, listToMaybe)
+import Text.Printf
 import Data.Word
 import GHC.IO.Handle (hDuplicateTo)
 import Network.BSD (getHostName)
@@ -382,6 +383,11 @@ genericMain daemon options check_fn prep_fn exec_fn = do
   let progname = daemonName daemon
 
   (opts, args) <- parseArgs progname options
+
+  -- Modify handleClient in UDSServer.hs to compile this logging out of luxid.
+  when (optDebug opts && daemon == GanetiLuxid) .
+    hPutStrLn stderr $
+      printf C.debugModeConfidentialityWarning (daemonName daemon)
 
   ensureNode daemon
 

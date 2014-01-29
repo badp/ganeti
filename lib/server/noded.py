@@ -1297,4 +1297,5 @@ def Main():
   daemon.GenericMain(constants.NODED, parser, CheckNoded, PrepNoded, ExecNoded,
                      default_ssl_cert=pathutils.NODED_CERT_FILE,
                      default_ssl_key=pathutils.NODED_CERT_FILE,
-                     console_logging=True)
+                     console_logging=True,
+                     warn_about_private_values_and_debug_mode=True)

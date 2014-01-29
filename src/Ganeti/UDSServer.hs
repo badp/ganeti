@@ -59,6 +59,7 @@ import Control.Applicative
 import Control.Concurrent (forkIO)
 import Control.Exception (catch)
 import Data.IORef
+import Data.List
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.UTF8 as UTF8
@@ -81,7 +82,7 @@ import Ganeti.Logging
 import Ganeti.Runtime (GanetiDaemon(..), MiscGroup(..), GanetiGroup(..))
 import Ganeti.THH
 import Ganeti.Utils
-
+import Ganeti.Constants (privateParametersBlacklist)
 
 -- * Utility functions
 
@@ -359,7 +360,14 @@ handleClient
     -> IO Bool
 handleClient handler client = do
   msg <- recvMsgExt client
+
+  debugMode <- isDebugMode
+  when (debugMode && isRisky msg) $
+    logAlert "POSSIBLE LEAKING OF CONFIDENTIAL PARAMETERS. \
+             \Daemon is running in debug mode. \
+             \The text of the request has been logged."
   logDebug $ "Received message: " ++ show msg
+
   case msg of
     RecvConnClosed -> logDebug "Connection closed" >>
                       return False
@@ -369,6 +377,11 @@ handleClient handler client = do
       (close, outMsg) <- handleRawMessage handler payload
       sendMsg client outMsg
       return close
+
+isRisky :: RecvResult -> Bool
+isRisky msg = case msg of
+  RecvOk payload -> any (`isInfixOf` payload) privateParametersBlacklist
+  _ -> False
 
 -- | Main client loop: runs one loop of 'handleClient', and if that
 -- doesn't report a finished (closed) connection, restarts itself.

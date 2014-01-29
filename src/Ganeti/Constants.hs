@@ -4774,3 +4774,9 @@ privateParametersBlacklist = [ "osparams_private"
                              , "osparams_secret"
                              , "osparams_private_cluster" ]
 
+-- | Warn the user that the logging level is too low for production use.
+debugModeConfidentialityWarning :: String
+debugModeConfidentialityWarning = "ALERT: %s started in debug mode.\n\
+                                  \ Private and secret parameters WILL\
+                                  \ be logged!\n"
+
