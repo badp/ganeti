@@ -694,7 +694,7 @@ instance JSON.JSON JobIdDep where
 absoluteJobIdDep :: (Monad m) => JobIdDep -> JobId -> m JobIdDep
 absoluteJobIdDep (JobDepAbsolute jid) _ = return $ JobDepAbsolute jid
 absoluteJobIdDep (JobDepRelative rjid) jid =
-  liftM JobDepAbsolute . makeJobId $ fromJobId jid + fromNegative rjid 
+  liftM JobDepAbsolute . makeJobId $ fromJobId jid + fromNegative rjid
 
 -- | Job Dependency type.
 data JobDependency = JobDependency JobIdDep [FinalizedJobStatus]
@@ -707,7 +707,7 @@ instance JSON JobDependency where
 -- | From job dependency and job id compute an absolute job dependency.
 absoluteJobDependency :: (Monad m) => JobDependency -> JobId -> m JobDependency
 absoluteJobDependency (JobDependency jdep fstats) jid =
-  liftM (flip JobDependency fstats) $ absoluteJobIdDep jdep jid 
+  liftM (flip JobDependency fstats) $ absoluteJobIdDep jdep jid
 
 -- | Valid opcode priorities for submit.
 $(THH.declareIADT "OpSubmitPriority"
@@ -932,21 +932,7 @@ instance Monad Private where
   (Private x) >>= f = f x
   return = Private
 
---instance (JSON.JSON a) => PrivateJSON (Private a) where
---  unprivateAndShowJSON l | l >= Private_ = JSON.showJSON . getPrivate
---  unprivateAndShowJSON _                 = JSON.showJSON
-
---instance (JSON.JSON a) => JSON.JSON [(String, Private JSON.JSValue)] where
---  showJSON value = JSON.toJSObject $ map f value
---    where f (k, v) = (k, Private $ JSON.showJSON v)
-
 showPrivateJSObject :: (JSON.JSON a) =>
                        [(String, a)] -> JSON.JSObject (Private JSON.JSValue)
 showPrivateJSObject value = JSON.toJSObject $ map f value
   where f (k, v) = (k, Private $ JSON.showJSON v)
-
---readPrivateJSObject :: String ->
---                       JSON.Result (JSON.JSObject (Private JSON.JSValue))
---readPrivateJSObject json = do
---  jsobj <- JSON.decode json
---  return fmap Private $ readContainer jsobj
