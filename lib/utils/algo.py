@@ -114,13 +114,11 @@ def GetRepeatedKeys(*dicts):
   if len(dicts) < 2:
     return set()
 
-  # It is trivial to generalize this function to more than just dicts
-  # by changing the .keys() call to another "for key in dictionary"
-  keys = [set(dictionary.keys()) for dictionary in dicts]
-  return set.union(*[x & y
-                     for x in keys
-                     for y in keys
-                     if x is not y])
+  keys = []
+  for dictionary in dicts:
+    keys.extend(dictionary)
+
+  return set(FindDuplicates(keys))
 
 
 def _NiceSortTryInt(val):
