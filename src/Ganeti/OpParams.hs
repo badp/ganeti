@@ -1102,23 +1102,15 @@ pInstOsParams =
 
 pInstOsParamsPrivate :: Field
 pInstOsParamsPrivate =
-  field { fieldDoc = "meh"
-          -- fieldShow = Just [| \(_,y) -> showPrivateJSObject y |]
-        }
-  where field =
-          withDoc "Private OS parameters for instance" .
-          optionalField $
-          simpleField "osparams_private" [t| JSObject (Private JSValue) |]
+  withDoc "Private OS parameters for instance" .
+  optionalField $
+  simpleField "osparams_private" [t| JSObject (Private JSValue) |]
 
 pInstOsParamsSecret :: Field
 pInstOsParamsSecret =
-  field { fieldDoc = "meh"
-          -- fieldShow = Just [| \(_,y) -> showPrivateJSObject y |]
-        }
-  where field =
-          withDoc "Secret OS parameters for instance" .
-          optionalField $
-          simpleField "osparams_secret" [t| JSObject (Private JSValue) |]
+  withDoc "Secret OS parameters for instance" .
+  optionalField $
+  simpleField "osparams_secret" [t| JSObject (Private JSValue) |]
 
 pPrimaryNode :: Field
 pPrimaryNode =
