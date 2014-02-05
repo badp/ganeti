@@ -159,8 +159,6 @@ module Ganeti.Types
   , hotplugTargetToRaw
   , HotplugAction(..)
   , hotplugActionToRaw
-  , ParamVisibility(..)
-  , paramVisibilityToRaw
   , Private(..)
   , showPrivateJSObject
   ) where
