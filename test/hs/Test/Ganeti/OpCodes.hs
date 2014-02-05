@@ -501,12 +501,14 @@ genMacPrefix = do
   mkNonEmpty . intercalate ":" $ map (printf "%02x") octets
 
 -- | JSObject of arbitrary data.
+--
 -- Since JSValue does not implement Arbitrary, I'll simply generate
 -- (String, String) objects.
 arbitraryPrivateJSObj :: Gen (J.JSObject (Private J.JSValue))
-arbitraryPrivateJSObj = constructor <$> (fromNonEmpty <$> genNameNE)
-                                    <*> (fromNonEmpty <$> genNameNE)
-    where constructor k v = showPrivateJSObject [(k, v)]
+arbitraryPrivateJSObj =
+  constructor <$> (fromNonEmpty <$> genNameNE)
+              <*> (fromNonEmpty <$> genNameNE)
+    where constructor = showPrivateJSObject . ([:]) . (,)
 
 -- | Arbitrary instance for MetaOpCode, defined here due to TH ordering.
 $(genArbitrary ''OpCodes.MetaOpCode)

@@ -224,7 +224,7 @@ instance Arbitrary OsParams where
 instance Arbitrary Objects.ClusterOsParamsPrivate where
   arbitrary = (GenericContainer . Map.fromList) <$> arbitrary
 
-instance (Arbitrary a) => Arbitrary (Private a) where
+instance Arbitrary a => Arbitrary (Private a) where
   arbitrary = Private <$> arbitrary
 
 instance Arbitrary ClusterOsParams where

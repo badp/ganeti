@@ -252,7 +252,7 @@ class Private(object):
                    descr="%s()" % self._descr)
 
   # pylint: disable=R0201
-  # While this could get away with being a function, it needs to be an attr.
+  # While this could get away with being a function, it needs to be a method.
   # Required by the copy.deepcopy function used by FillDict.
   def __getnewargs__(self):
     return tuple()
@@ -295,8 +295,10 @@ class PrivateDict(dict):
         value = PrivateDict(value)
     dict.__setitem__(self, item, value)
 
-  # copied straight from cpython/Lib/UserDict.py
   # The actual conversion to Private containers is done by __setitem__
+
+  # copied straight from cpython/Lib/UserDict.py
+  # Copyright (c) 2001-2014 Python Software Foundation; All Rights Reserved
   def update(self, other=None, **kwargs):
     # Make progressively weaker assumptions about "other"
     if other is None:
