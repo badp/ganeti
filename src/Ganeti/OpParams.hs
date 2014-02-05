@@ -1212,23 +1212,15 @@ pTempOsParams =
 
 pTempOsParamsPrivate :: Field
 pTempOsParamsPrivate =
-  field { fieldDoc = "meh"
-          -- fieldShow = Just [| \(_,y) -> showPrivateJSObject y |]
-        }
-  where field =
-          withDoc "Private OS parameters for instance reinstalls" .
-          optionalField $
-          simpleField "osparams_private" [t| JSObject (Private JSValue) |]
+  withDoc "Private OS parameters for instance reinstalls" .
+  optionalField $
+  simpleField "osparams_private" [t| JSObject (Private JSValue) |]
 
 pTempOsParamsSecret :: Field
 pTempOsParamsSecret =
-  field { fieldDoc = "meh"
-          -- fieldShow = Just [| \(_,y) -> showPrivateJSObject y |]
-        }
-  where field =
-          withDoc "Secret OS parameters for instance reinstalls" .
-          optionalField $
-          simpleField "osparams_secret" [t| JSObject (Private JSValue) |]
+  withDoc "Secret OS parameters for instance reinstalls" .
+  optionalField $
+  simpleField "osparams_secret" [t| JSObject (Private JSValue) |]
 
 pShutdownTimeout :: Field
 pShutdownTimeout =
