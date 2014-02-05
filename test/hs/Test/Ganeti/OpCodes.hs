@@ -636,7 +636,7 @@ case_py_compat_fields = do
            HUnit.assertEqual "Mismatch in OP_ID" py_id hs_id
            HUnit.assertEqual ("Mismatch in fields for " ++ hs_id)
              py_flds hs_flds
-        ) $ zip py_fields hs_fields
+        ) $ zip hs_fields py_fields
 
 -- | Checks that setOpComment works correctly.
 prop_setOpComment :: OpCodes.MetaOpCode -> String -> Property
