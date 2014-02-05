@@ -211,6 +211,17 @@ LoadSigned = LoadSignedJson
 
 
 class Private(object):
+  """Wrap a value so it is hard to leak it accidentally.
+
+    >>> x = Private("foo")
+    >>> print "Value: %s" % x
+    Value: <redacted>
+    >>> print "Value: {0}".format(x)
+    Value: <redacted>
+    >>> x.upper() == "FOO"
+    True
+
+  """
 
   def __init__(self, item, descr="redacted"):
     if isinstance(item, Private):
@@ -219,6 +230,7 @@ class Private(object):
     self._descr = descr
 
   def Get(self):
+    "Return the wrapped value."
     return self._item
 
   def __str__(self):
@@ -271,12 +283,11 @@ class PrivateDict(dict):
     >>> PrivateDict()
     {}
     >>> supersekkrit = PrivateDict({"password": "foobar"})
-    >>> supersekkrit["password"]
-    Private(?, descr='password')
+    >>> print supersekkrit["password"]
+    <password>
     >>> supersekkrit["password"].Get()
     'foobar'
-    >>> supersekkrit["user"] = "eggspam"
-    >>> supersekkrit.GetPrivate("user")
+    >>> supersekkrit.GetPrivate("password")
     'eggspam'
     >>> supersekkrit.Unprivate()
     {'password': 'foobar', 'user': 'eggspam'}
@@ -318,7 +329,7 @@ class PrivateDict(dict):
   def GetPrivate(self, *args):
     """Like dict.get, but extracting the value in the process.
 
-    Arguments are semantically equivalent to dict.get
+    Arguments are semantically equivalent to ``dict.get``
 
       >>> PrivateDict({"foo": "bar"}).GetPrivate("foo")
       'bar'
